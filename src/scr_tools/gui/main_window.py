@@ -13,9 +13,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 import tkinter as tk
-from tkinter import font, ttk
+from tkinter import ttk
 
 from scr_tools.configuration import Settings
+from scr_tools.gui.compact_style import CompactStyle
+from scr_tools.gui.context_help import ContextHelp
 from scr_tools.gui.settings_view import SettingsView
 from scr_tools.localization.translator import Translator
 from scr_tools.version import VERSION
@@ -24,7 +26,7 @@ from scr_tools.version import VERSION
 MOVEMENT_REVEAL_SEQUENCES: tuple[str, ...] = (
     "<Control-Shift-KeyPress-S>", "<Control-Shift-KeyPress-s>",
 )
-MINIMUM_WINDOW_WIDTH: int = 590
+MINIMUM_WINDOW_WIDTH: int = 500
 
 
 @dataclass(frozen=True, slots=True)
@@ -89,12 +91,12 @@ class MainWindow:
         self._capture_status: tk.StringVar = tk.StringVar(
             root, value=translator.text("capture.ready")
         )
-        self._notice: tk.StringVar = tk.StringVar(
-            root, value=translator.text("settings.ready")
-        )
+        self._notice: tk.StringVar = tk.StringVar(root)
         self._movement_notice: tk.StringVar = tk.StringVar(root)
         self._status_cache: tuple[str, str, bool] | None = None
-        self._build_style()
+        self._fitting: bool = False
+        self._presentation: CompactStyle = CompactStyle(root)
+        self._hints: list[ContextHelp] = []
         root.title(translator.text("app.title"))
         root.protocol("WM_DELETE_WINDOW", self._request_hide)
         root.bind("<Unmap>", self._on_unmap, add="+")
@@ -106,7 +108,7 @@ class MainWindow:
             root.iconbitmap(default=str(icon_path))
         root.columnconfigure(0, weight=1)
         root.rowconfigure(0, weight=1)
-        body: ttk.Frame = ttk.Frame(root, padding=(16, 12))
+        body: ttk.Frame = ttk.Frame(root, padding=(14, 10))
         body.grid(row=0, column=0, sticky="nsew")
         body.columnconfigure(0, weight=1)
         body.rowconfigure(3, weight=1)
@@ -114,7 +116,8 @@ class MainWindow:
         header.grid(row=0, column=0, sticky="ew")
         header.columnconfigure(0, weight=1)
         ttk.Label(
-            header, text=translator.text("app.title"), style="Title.TLabel"
+            header, text=translator.text("app.title"), style="Title.TLabel",
+            image=self._presentation.icon("camera"), compound="left",
         ).grid(row=0, column=0, sticky="w")
         ttk.Label(
             header, text=VERSION, style="Secondary.TLabel"
@@ -130,6 +133,7 @@ class MainWindow:
             text=translator.text("button.mover_enabled"),
             variable=self._enabled,
             command=self._toggle_mover,
+            style="Switch.TCheckbutton",
         )
         self._toggle.grid(row=0, column=1, sticky="e", padx=(12, 0))
         detail_label: ttk.Label = ttk.Label(
@@ -138,30 +142,33 @@ class MainWindow:
         )
         detail_label.grid(row=2, column=0, sticky="w", pady=(3, 10))
         self.settings_view: SettingsView = SettingsView(
-            body, translator, settings, startup_supported
+            body, translator, settings, startup_supported, self._presentation
         )
         self.settings_view.grid(row=3, column=0, sticky="nsew")
         actions_row: ttk.Frame = ttk.Frame(body)
         actions_row.grid(row=4, column=0, sticky="ew", pady=(12, 6))
-        actions_row.columnconfigure(2, weight=1)
+        actions_row.columnconfigure(3, weight=1)
         self._test: ttk.Button = ttk.Button(
             actions_row,
             text=translator.text("button.test"),
             command=actions.test,
+            image=self._presentation.icon("play"), compound="left",
         )
-        self._test.grid(row=0, column=0, sticky="w")
+        self._test.grid(row=0, column=2, sticky="w", padx=(8, 0))
         self._capture: ttk.Button = ttk.Button(
             actions_row,
             text=translator.text("button.capture"),
             command=actions.capture,
+            image=self._presentation.icon("camera"), compound="left",
         )
-        self._capture.grid(row=0, column=1, sticky="w", padx=(8, 0))
+        self._capture.grid(row=0, column=0, sticky="w")
         self._apply: ttk.Button = ttk.Button(
             actions_row,
             text=translator.text("button.apply"),
             command=actions.apply,
+            image=self._presentation.icon("check"), compound="left",
         )
-        self._apply.grid(row=0, column=3, sticky="e")
+        self._apply.grid(row=0, column=4, sticky="e")
         last_movement_label: ttk.Label = ttk.Label(
             body,
             textvariable=self._last_movement,
@@ -179,18 +186,26 @@ class MainWindow:
         )
         self._capture_label.grid(row=0, column=0, sticky="w")
         self._folder_button: ttk.Button = ttk.Button(
-            capture_row,
+            actions_row,
             text=translator.text("button.open_folder"),
             command=actions.open_folder,
+            image=self._presentation.control_images("folder", panel=False),
+            compound="image",
+            style="Icon.TButton",
         )
         self._folder_button.grid(row=0, column=1, sticky="e", padx=(8, 0))
-        ttk.Separator(body).grid(row=7, column=0, sticky="ew", pady=(8, 7))
+        self._hints.append(ContextHelp(
+            self._folder_button, translator.text("button.open_folder")
+        ))
         self._notice_label: ttk.Label = ttk.Label(
-            body, textvariable=self._notice, wraplength=510
+            body, textvariable=self._notice, wraplength=460,
+            style="Secondary.TLabel",
         )
         self._notice_label.grid(row=8, column=0, sticky="ew")
+        self._notice_label.grid_remove()
         self._movement_notice_label: ttk.Label = ttk.Label(
-            body, textvariable=self._movement_notice, wraplength=510
+            body, textvariable=self._movement_notice, wraplength=460,
+            style="Secondary.TLabel",
         )
         self._movement_notice_label.grid(row=9, column=0, sticky="ew")
         self._movement_widgets: tuple[tk.Widget, ...] = (
@@ -198,6 +213,9 @@ class MainWindow:
             self._movement_notice_label,
         )
         self._set_movement_visible(False)
+        self.settings_view.bind(
+            "<<SettingsLayoutChanged>>", self._on_settings_layout, add="+"
+        )
         # Geometry is derived from Tk's DPI-scaled font and widget requests.
         # No hard-coded physical window height clips controls at 150/200% DPI.
         root.update_idletasks()
@@ -236,24 +254,16 @@ class MainWindow:
             self._set_movement_visible(True)
         return "break"
 
-    def _build_style(self) -> None:
-        """Use Windows ttk rendering and point-sized scalable Segoe UI fonts.
+    def _on_settings_layout(self, event: tk.Event) -> None:
+        """Fit content after a compact page changes its requested height.
+
+        Args:
+            event (tk.Event): Main-thread settings-layout notification.
 
         Returns:
-            None: Theme and the few application-specific styles are installed.
+            None: A deferred fit preserves the event loop and user geometry.
         """
-        style: ttk.Style = ttk.Style(self.root)
-        if "vista" in style.theme_names():
-            style.theme_use("vista")
-        for name in ("TkDefaultFont", "TkTextFont", "TkMenuFont"):
-            font.nametofont(name, root=self.root).configure(
-                family="Segoe UI", size=10
-            )
-        style.configure("Title.TLabel", font=("Segoe UI", 17, "bold"))
-        style.configure("Status.TLabel", font=("Segoe UI", 11, "bold"))
-        style.configure("Secondary.TLabel", foreground="#515b68")
-        style.configure("TButton", padding=(9, 4))
-        style.configure("TNotebook.Tab", padding=(12, 5))
+        self.root.after_idle(self._fit_content)
 
     def _request_hide(self) -> None:
         """Route X and Alt+F4 to the application tray-availability guard.
@@ -338,6 +348,10 @@ class MainWindow:
             None: Existing status is replaced without a modal dialog.
         """
         self._notice.set(message)
+        if message:
+            self._notice_label.grid()
+        else:
+            self._notice_label.grid_remove()
         self._notice_label.configure(
             foreground="#a12424" if error else "#24364b"
         )
@@ -378,19 +392,26 @@ class MainWindow:
             None: Existing larger user geometry is preserved. Hidden windows
             keep their geometry until restored, when Tk recomputes requests.
         """
-        if self.root.state() == "withdrawn":
+        if self.root.state() == "withdrawn" or self._fitting:
             return
-        self.root.update_idletasks()
-        self.root.minsize(
-            max(self.root.winfo_reqwidth(), MINIMUM_WINDOW_WIDTH),
-            self.root.winfo_reqheight(),
-        )
-        width: int = max(self.root.winfo_width(), self.root.winfo_reqwidth())
-        height: int = max(self.root.winfo_height(), self.root.winfo_reqheight())
-        if (width, height) != (
-            self.root.winfo_width(), self.root.winfo_height()
-        ):
-            self.root.geometry(f"{width}x{height}")
+        self._fitting = True
+        try:
+            # A notebook request propagates through several grid parents.
+            # Flush that idle geometry before measuring the root, while the
+            # guard prevents other queued fit callbacks from re-entering.
+            self.root.update_idletasks()
+            self.root.minsize(
+                max(self.root.winfo_reqwidth(), MINIMUM_WINDOW_WIDTH),
+                self.root.winfo_reqheight(),
+            )
+            width: int = max(self.root.winfo_width(), self.root.winfo_reqwidth())
+            height: int = max(self.root.winfo_height(), self.root.winfo_reqheight())
+            if (width, height) != (
+                self.root.winfo_width(), self.root.winfo_height()
+            ):
+                self.root.geometry(f"{width}x{height}")
+        finally:
+            self._fitting = False
 
     def set_last_movement(self, message: str) -> None:
         """Show when the most recent uninterrupted movement completed.

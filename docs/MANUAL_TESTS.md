@@ -118,6 +118,14 @@ toolchain versions and observed result for each exercised item.
 
 ## Settings, localization and installation
 
+Before release, review the compact toolbar at 100/150/200% DPI and with Windows
+high-contrast colors. Hover and keyboard-focus icon controls; check captions,
+selected monitor modes and visible focus. Exercise every switch by mouse and
+Space, including disabled source-mode startup and the dependent display switch.
+Open each **?** by click and keyboard, dismiss with Escape and outside click,
+then minimize/restore with help open. Check small panel corners, quiet field
+edges, readable states and absence of clipped controls on every page.
+
 1. Apply nondefault preferences, exit from tray, and relaunch. Confirm the
    values persist and start-minimized is honored.
 2. With the app stopped, test missing fields, invalid types, damaged JSON and

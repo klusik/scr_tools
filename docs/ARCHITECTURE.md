@@ -38,6 +38,21 @@ background completions and failures cannot replace ordinary window notices.
 The tray offers only open, capture and exit. Reveal visibility is transient
 view state and is not a persisted preference or a global hotkey registration.
 
+`gui/compact_style.py` owns main-thread Pillow/Tk images for local line icons
+and switch indicators, scaled from current Tk DPI. Switches and monitor-mode
+choices retain native ttk checkbutton/radiobutton variables, keyboard focus
+and disabled-state behavior. The palette derives from Windows system colors.
+A placed canvas supplies a small rounded settings backdrop without taking
+part in grid size negotiation. The native notebook owns its tab hit testing;
+concealment unmanages the existing mouse page so it cannot inflate ordinary
+settings, while the page and all edited variables remain alive.
+
+`gui/context_help.py` owns translated tooltips and click/keyboard help popups.
+It cancels delayed hints and releases transient windows and root bindings on
+concealment and destruction. Main-window fitting flushes propagated native
+geometry under a re-entry guard, preserving responsive layout and preventing
+an earlier root-size measurement from clipping an expanded page.
+
 A dedicated native thread creates a hidden top-level window and runs the
 Windows message pump. It owns low-level hooks, `RegisterHotKey`, the native
 tray icon, WTS session notifications and `SetThreadExecutionState`. Queued

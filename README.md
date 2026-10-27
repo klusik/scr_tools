@@ -61,6 +61,13 @@ Concealment changes presentation only: applied settings, running movement,
 sleep prevention and pending form edits are preserved. The reveal state is
 not saved. Apply validates the complete proposed configuration before saving.
 
+Settings use a compact icon toolbar. Hover or keyboard-focus controls for
+their captions; the page title identifies the selected tab. The three monitor
+icons select combined, current-monitor or separate-monitor capture. Binary
+preferences use keyboard-operated switches. Press the plain **?** button for
+longer guidance; Escape, an outside click or hiding the window closes it.
+The settings panel has softly rounded corners and quiet system-color surfaces.
+
 | Setting | Default | Accepted behavior |
 | --- | --- | --- |
 | Mouse Mover | Enabled | Pause/enable after revealing controls with Ctrl+Shift+S |

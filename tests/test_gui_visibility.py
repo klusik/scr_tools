@@ -69,6 +69,8 @@ class MovementVisibilityTests(unittest.TestCase):
         """
         self.view.show()
         self.root.update()
+        self.root.focus_force()
+        self.root.update()
         self.root.event_generate("<Control-Shift-KeyPress-S>")
         self.root.update()
         self.assertIn("Mouse Mover", self._visible_tabs())
@@ -170,6 +172,134 @@ class MovementVisibilityTests(unittest.TestCase):
         self.root.update()
         self.assertEqual(self._visible_tabs(), ["Screenshots", "General"])
         self.hide_action.assert_not_called()
+
+    def test_monitor_icons_edit_pending_capture_mode_only(self) -> None:
+        """Native radio buttons retain the complete settings transaction."""
+        editor = self.view.settings_view
+        for mode in ("current", "each", "all"):
+            with self.subTest(mode=mode):
+                editor._mode_controls[mode].invoke()
+                candidate: Settings = editor.collect(self.settings)
+                self.assertEqual(candidate.screenshot_mode, mode)
+                self.assertEqual(candidate.idle_seconds, 120)
+                self.assertFalse(candidate.mover_enabled)
+        self.assertEqual(self.settings.screenshot_mode, "all")
+        self.action.assert_not_called()
+
+    def test_switches_support_keyboard_and_disabled_startup(self) -> None:
+        """Space changes a pending switch; source-mode startup stays disabled."""
+        self.view.show()
+        editor = self.view.settings_view
+        general: str = next(
+            tab for tab in editor.notebook.tabs()
+            if editor.notebook.tab(tab, "text") == "General"
+        )
+        editor.notebook.select(general)
+        self.root.update()
+        editor._minimized_control.focus_force()
+        self.root.update()
+        editor._minimized_control.event_generate("<KeyPress-space>")
+        editor._minimized_control.event_generate("<KeyRelease-space>")
+        self.root.update()
+        self.assertTrue(editor.collect(self.settings).start_minimized)
+        self.assertFalse(self.settings.start_minimized)
+        self.assertIn("disabled", editor._startup_control.state())
+        editor._startup_control.invoke()
+        self.assertFalse(editor._startup.get())
+        self.action.assert_not_called()
+
+    def test_dependent_display_switch_retains_its_disabled_preference(self) -> None:
+        """Changing sleep availability never discards the display preference."""
+        editor = self.view.settings_view
+        editor.load(replace(self.settings, keep_displays_awake=True))
+        self.assertIn("disabled", editor._display_control.state())
+        editor._sleep_control.invoke()
+        self.assertNotIn("disabled", editor._display_control.state())
+        editor._sleep_control.invoke()
+        self.assertIn("disabled", editor._display_control.state())
+        self.assertTrue(editor.collect(self.settings).keep_displays_awake)
+        self.action.assert_not_called()
+
+    def test_help_opens_by_keyboard_and_closes_on_escape_and_outside_click(self) -> None:
+        """Long guidance is accessible without permanent paragraphs or edits."""
+        self.view.show()
+        self.root.update()
+        help_popup = self.view.settings_view._page_help["tab.screenshots"]
+        help_popup._widget.focus_force()
+        self.root.update()
+        help_popup._widget.event_generate("<Return>")
+        self.root.update()
+        self.assertIsNotNone(help_popup._popup)
+        self.assertTrue(help_popup._popup.winfo_ismapped())
+        help_popup._widget.event_generate("<Escape>")
+        self.root.update()
+        self.assertIsNone(help_popup._popup)
+        help_popup.toggle()
+        self.root.update()
+        self.view._capture.event_generate("<ButtonPress-1>")
+        self.root.update()
+        self.assertIsNone(help_popup._popup)
+        self.assertEqual(self.view.settings_view.collect(self.settings),
+                         self.settings)
+        self.action.assert_not_called()
+
+    def test_hide_and_control_destruction_release_help_resources(self) -> None:
+        """Help windows and timers cannot outlive concealed or destroyed UI."""
+        self._reveal()
+        help_popup = self.view.settings_view._page_help["tab.mouse"]
+        help_popup.toggle()
+        self.root.update()
+        self.assertIsNotNone(help_popup._popup)
+        self.view.hide()
+        self.root.update()
+        self.assertIsNone(help_popup._popup)
+        self.view.show()
+        self.root.update()
+        help_popup._widget.destroy()
+        self.assertEqual(help_popup._bindings, [])
+        self.assertIsNone(help_popup._timer)
+        self.assertIsNone(help_popup._popup)
+
+    def test_initial_layout_is_compact_and_every_page_fits(self) -> None:
+        """A withdrawn start must measure Screenshots instead of hidden Mouse."""
+        self.view.show()
+        self.root.update()
+        self.assertLess(
+            self.root.winfo_height(), self.view._presentation.pixels(420)
+        )
+        centers: list[int] = [
+            button.winfo_rooty() + button.winfo_height() // 2
+            for button in (self.view._capture, self.view._folder_button,
+                           self.view._apply)
+        ]
+        self.assertLessEqual(max(centers) - min(centers), 1)
+        editor = self.view.settings_view
+        self._reveal()
+        for tab in editor.notebook.tabs():
+            with self.subTest(tab=editor.notebook.tab(tab, "text")):
+                editor.notebook.select(tab)
+                self.root.update()
+                page: tk.Misc = editor.nametowidget(tab)
+                for child in page.winfo_children():
+                    if child.winfo_ismapped():
+                        self.assertLessEqual(
+                            child.winfo_y() + child.winfo_height(),
+                            page.winfo_height(),
+                        )
+
+    def test_long_folder_shows_destination_end_without_changing_saved_path(self) -> None:
+        """Clipped folder display keeps its useful suffix and full edit value."""
+        self.view.show()
+        self.root.update()
+        folder: str = "C:\\Pictures\\" + "Archive\\" * 12 + "SCR Tools"
+        editor = self.view.settings_view
+        editor.load(replace(self.settings, screenshot_folder=folder))
+        self.root.update()
+        self.assertEqual(editor._folder_control.get(), folder)
+        self.assertEqual(editor._folder_control.xview()[1], 1.0)
+        self.assertEqual(editor.collect(self.settings).screenshot_folder, folder)
+        self.assertNotEqual(self.settings.screenshot_folder, folder)
+        self.action.assert_not_called()
 
 
 if __name__ == "__main__":

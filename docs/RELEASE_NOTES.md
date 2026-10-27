@@ -2,8 +2,14 @@
 
 ## 0.2.0 (in preparation)
 
-The final release will follow a separate settings-design review. This draft
-records the implemented behavior as of 2026-10-27.
+The final release will follow visual acceptance of the implemented settings
+redesign. This draft records behavior as of 2026-10-27.
+
+Settings now follow the approved compact toolbar proposal: local line icons,
+subtle active surfaces, lightly rounded panels, shorter labels and native
+switches for binary preferences. Monitor-mode choices use three icon controls.
+Detailed guidance is available under plain **?** buttons and icon captions in
+tooltips. Help supports keyboard activation, Escape and outside-click dismissal.
 
 The normal window now shows Screenshots and General. Mouse Mover settings,
 enable/pause, Test movement, countdown, last-movement time and movement
@@ -24,7 +30,7 @@ shortcut remains **Ctrl+Shift+F11** by default. Ctrl+Shift+S is a separate,
 window-local reveal shortcut. Windows 11 x64, system CPython 3.14 for source
 execution, and per-user installation requirements remain unchanged.
 
-Planned release files, to be built after the design changes are approved:
+Planned release files, to be built after final design acceptance:
 
 - `SCRTools_0.2.0.exe`: standalone application.
 - `SCRTools_0.2.0_Setup.exe`: per-user installer.

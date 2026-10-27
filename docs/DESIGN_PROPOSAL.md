@@ -1,8 +1,9 @@
 # Compact settings proposal
 
-This is a review proposal on `feature/compact-settings-design`, based on the
-implemented 0.2.0 preparation at commit `85246da`. The production Tk interface
-has not been redesigned and compilation remains deferred.
+The user approved **Kompaktní lišta** for implementation on
+`feature/compact-settings-design`, then requested softer edges, a lighter
+layered appearance, switches and slightly rounded panels. The production Tk
+interface now follows that direction. Compilation remains deferred.
 
 ## Reference
 
@@ -32,7 +33,28 @@ captures a screen, moves the pointer, selects a real folder or saves settings.
 Its Capture, Test, folder and shortcut actions use synthetic local values.
 The global screenshot shortcut in the running application is not changed.
 
-## Implementation constraints for the next iteration
+## Native implementation
+
+The Tk view retains the native Windows title bar and uses local Pillow-rendered
+line icons, icon tabs with retained translated captions, native radio buttons
+for monitor modes and native checkbuttons with switch indicators. Detailed
+guidance lives in click/keyboard help instead of permanent form paragraphs.
+Controls keep native focus and state behavior; preferences still use Apply.
+
+Subtle surface mixtures derive from system colors. A decorative canvas gives
+the settings panel a seven-logical-pixel corner radius, without adding a
+geometry owner or changing desktop/window opacity. Field outlines remain quiet
+and keyboard focus remains explicit. The hidden mouse page is unmanaged while
+concealed, retaining controls and pending edits without enlarging the default
+window.
+
+The screenshot review also prompted a visual consistency pass. Icon states now
+use small rounded images with a quiet selection line and an explicit rounded
+keyboard-focus mark. Disabled and off switches stay neutral, while on switches
+use the accent at the opposite thumb position. Native gray disabled backplates
+and dotted icon-focus boxes are suppressed. Read-only language controls share
+the field surface, Capture/Open folder/Apply share one footer row, and long
+editable folder paths initially show their destination suffix.
 
 Retain Tkinter/ttk, translation lookup, Apply transactions, immediate mover
 pause, screenshot queuing, tray-only ordinary Exit and main-thread UI ownership.
@@ -50,5 +72,6 @@ Both layouts rendered successfully in the local sandboxed preview with no
 browser errors. The General tab and a switch were exercised, Ctrl+Shift+S
 revealed movement, minimize concealed the window, and restore returned to
 Screenshots without the movement tab. A pending timeout edit of 321 seconds
-survived concealment and the next reveal. This is prototype-only evidence;
-native Tk redesign, mixed-DPI acceptance and final packaging remain pending.
+survived concealment and the next reveal. This is prototype-only evidence.
+Native implementation checks and remaining visual acceptance are recorded in
+`VERIFICATION.md`; mixed-DPI acceptance and final packaging remain pending.

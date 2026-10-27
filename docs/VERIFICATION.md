@@ -1,5 +1,63 @@
 # Verification record
 
+## Compact control visual corrections (2026-10-27)
+
+After the user supplied screenshots of both settings pages, the feature branch
+received a focused visual consistency pass: rounded icon state images, explicit
+keyboard-focus marks, neutral off/disabled switches, removal of native gray
+backplates and dotted icon-focus boxes, consistent read-only field colors and
+one aligned Capture/Open folder/Apply footer. Long editable paths expose their
+destination suffix while retaining their full value and Apply semantics.
+
+An isolated system-Python Tk window used synthetic settings and a sample folder
+to inspect the revised Screenshots page. The new tab and monitor states, help
+icon, field edges and footer were visible; the user approved that appearance.
+No real capture, native host, power request or user-settings write was involved.
+The attempted transition to General was stopped before input because the user
+was interacting with the window; further automatic UI actions were unnecessary
+after their approval. High-contrast and mixed-DPI acceptance remain pending.
+Compilation is still deferred at the user's request.
+
+Final checks passed for **49 Python source files** and **110 tests**, including
+thirteen real-widget GUI tests. Added coverage verifies that footer actions
+share one baseline and that a clipped folder field displays its destination
+end while preserving the full editable setting. The source-archive selection
+was reviewed and still contains 72 maintained files; no archive was generated.
+
+## Compact native settings implementation (2026-10-27)
+
+Implemented on `feature/compact-settings-design` with installed system CPython
+3.14.7 x64 and Tcl/Tk 9.0.4. Compilation and installer execution remain deferred
+at the user's request. The application version remains 0.2.0 in preparation.
+
+- Source-policy check: **49 Python files passed**.
+- Complete suite: **109 tests passed**, no failures or skips.
+- Twelve real-widget GUI tests cover existing concealment/reveal and preserved
+  edits, pending monitor-mode selection, keyboard switches, disabled startup,
+  dependent display state, help activation/dismissal/resource cleanup, compact
+  startup and unclipped controls on all pages.
+- The first native redesign was launched with `py -3.14 run_scr_tools.py` on the
+  ordinary desktop. Its actual icon toolbar, monitor buttons, short labels and
+  Capture/Apply controls were inspected. The user requested softer edges and
+  panel rounding after seeing that running window.
+- Subsequent changes soften borders and surfaces, add a small rounded backdrop,
+  retain native switch input and remove hidden-page sizing from ordinary UI.
+  Geometry tests caught and corrected page clipping; image-backed frame geometry
+  was replaced with an independently placed canvas to avoid a Tcl/Tk 9 layout
+  cycle. All twelve GUI tests and the full suite pass after those corrections.
+- Computer Use was stopped by physical Escape before the first running instance
+  could be exited and restarted. No further computer input was issued. That
+  existing instance retains its earlier loaded presentation; the latest source
+  requires a normal tray Exit and restart for the final visual review.
+
+Final visual acceptance of the softened surfaces/corners, Windows high-contrast
+appearance, mixed-DPI layouts and full native tray/capture acceptance remain
+**Not run**. No screenshot capture or user-settings write was requested during
+the visual inspection. Existing native scheduling, capture, installer and
+cleanup boundaries were reviewed and are unchanged. Frozen resources, release
+builds and final source-archive generation remain deferred; the source archive
+allowlist includes the new GUI modules through its maintained `src` area.
+
 ## Version 0.2.0 source preparation (2026-10-27)
 
 The hidden movement presentation was checked on Windows 11 x64 build 26200
