@@ -28,7 +28,7 @@ class SettingsView(ttk.Frame):
     """Present three small pages while keeping every Tk operation local.
 
     Attributes:
-        notebook (ttk.Notebook): Mouse, screenshot, and general settings pages.
+        notebook (ttk.Notebook): Screenshots, general, and optional mouse pages.
     """
 
     def __init__(
@@ -83,7 +83,26 @@ class SettingsView(ttk.Frame):
         self._build_mouse_page()
         self._build_screenshot_page()
         self._build_general_page()
+        self.set_movement_visible(False)
         self.load(settings)
+
+    def set_movement_visible(self, visible: bool) -> None:
+        """Reveal or conceal the mouse page without changing its form values.
+
+        Args:
+            visible (bool): Whether to expose and select the mouse page.
+
+        Returns:
+            None: Concealment selects Screenshots if the mouse page was active.
+                Hidden controls retain both applied and pending edits.
+        """
+        if visible:
+            self.notebook.add(self._mouse_page)
+            self.notebook.select(self._mouse_page)
+        else:
+            if self.notebook.select() == str(self._mouse_page):
+                self.notebook.select(self._screenshot_page)
+            self.notebook.hide(self._mouse_page)
 
     def _page(self, title_key: str) -> ttk.Frame:
         """Create a notebook page with consistent two-column sizing.
@@ -120,7 +139,8 @@ class SettingsView(ttk.Frame):
         Returns:
             None: The notebook gains one populated page.
         """
-        page: ttk.Frame = self._page("tab.mouse")
+        self._mouse_page: ttk.Frame = self._page("tab.mouse")
+        page: ttk.Frame = self._mouse_page
         self._label(page, 0, "settings.idle")
         ttk.Spinbox(
             page, from_=10, to=86400, textvariable=self._idle, width=12
@@ -176,7 +196,8 @@ class SettingsView(ttk.Frame):
         Returns:
             None: The notebook gains its screenshot page.
         """
-        page: ttk.Frame = self._page("tab.screenshots")
+        self._screenshot_page: ttk.Frame = self._page("tab.screenshots")
+        page: ttk.Frame = self._screenshot_page
         self._label(page, 0, "settings.hotkey")
         ttk.Entry(page, textvariable=self._hotkey, width=27).grid(
             row=0, column=1, sticky="ew", pady=5

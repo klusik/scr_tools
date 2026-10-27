@@ -1,5 +1,46 @@
 # Verification record
 
+## Version 0.2.0 source preparation (2026-10-27)
+
+The hidden movement presentation was checked on Windows 11 x64 build 26200
+using installed system CPython 3.14.7, Pillow 13.0.0 and Tcl/Tk 9.0.4.
+The source-policy check passed for all 47 maintained Python files. All 103
+tests passed with no failures or skips, including six real-widget Tk tests.
+
+The new tests exercise the default Screenshots/General view, real Tk shortcut
+dispatch with entry focus and repeated presses, close/minimize/withdrawal,
+restoration, retained pending edits and nondefault applied values. Application
+tests keep movement results and hook/power failures out of ordinary notices
+while leaving screenshot errors visible. Tray tests cover the remaining
+open/capture/exit actions, dismissal, the removed toggle identifier and native
+menu cleanup after failure. These tests do not synthesize global input,
+request screenshots, change the user's settings or acquire power requests.
+
+A preliminary frozen build with version 0.1.0 compiled successfully using
+PyInstaller 6.22.3 and Inno Setup 6. Its actual window was inspected and showed
+Screenshots and General with no movement controls or status. The user stopped
+Computer Use with physical Escape before the frozen shortcut/tray acceptance
+checks could finish; no further UI input was issued and that application was
+left running. The user subsequently confirmed the desired presentation and
+requested release version 0.2.0. This observation is separate from an executed
+0.2.0 frozen-app smoke test.
+
+The authoritative version is now 0.2.0 and release notes are a draft pending
+the requested settings redesign. A 0.2.0 build had already started when the
+user deferred compilation; it was cancelled during PyInstaller analysis,
+after its source check and all 103 tests passed again. No 0.2.0 executable or
+installer was produced. Final packaging and source-archive generation are
+deferred until the design work is ready. The maintained archive allowlist
+includes the new GUI tests and release notes through its tests/docs areas.
+
+The installer has not been executed. Frozen-app keyboard/tray acceptance,
+maximized and mixed-DPI layout, installation/uninstallation and the broader
+manual checklist remain **Not run** for 0.2.0. Existing baseline native
+observations below are historical evidence and are not a claim that those
+checks were repeated for this release.
+
+## Earlier baseline verification
+
 Verified on 2026-10-27 after correcting mouse-input marker round trips and
 Inno compiler discovery, then preserving generated manifest namespaces.
 Executed checks below distinguish native observations from mock coverage

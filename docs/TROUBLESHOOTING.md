@@ -15,7 +15,17 @@ If tray registration fails, SCR Tools reports the failure and keeps its window
 accessible instead of hiding the only available controls. Explorer restarts
 are handled by re-registering the icon.
 
+## Mouse Mover settings are hidden
+
+Focus the SCR Tools window and press **Ctrl+Shift+S**. This reveals the
+movement page, enable/pause control, test action and status. Minimize, Close,
+Alt+F4 and hiding to tray conceal them again, including after restoration.
+Their visibility does not change saved preferences, pending edits, background
+movement or sleep prevention. The tray has no movement toggle.
+
 ## The timer keeps resetting or movement does not start
+
+First reveal movement controls with **Ctrl+Shift+S** in the focused window.
 
 If a 10-second countdown reaches 9/10, immediately restarts at 0/10 and
 **Last movement** stays **Never**, update to the corrected source/build and

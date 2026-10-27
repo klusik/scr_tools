@@ -516,7 +516,7 @@ class NativeHost:
             if event in (0x0203, 0x0400, 0x0401):
                 self._emit("open")
             elif event in (0x007B, 0x0205) and self._tray is not None:
-                action = self._tray.show_menu(self._configuration.mover_enabled)
+                action = self._tray.show_menu()
                 if action is not None:
                     self._emit(action)
             return 0

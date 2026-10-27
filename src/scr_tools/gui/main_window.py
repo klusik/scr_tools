@@ -21,6 +21,12 @@ from scr_tools.localization.translator import Translator
 from scr_tools.version import VERSION
 
 
+MOVEMENT_REVEAL_SEQUENCES: tuple[str, ...] = (
+    "<Control-Shift-KeyPress-S>", "<Control-Shift-KeyPress-s>",
+)
+MINIMUM_WINDOW_WIDTH: int = 590
+
+
 @dataclass(frozen=True, slots=True)
 class WindowActions:
     """Callbacks implemented by the application on the Tk main thread.
@@ -43,7 +49,7 @@ class WindowActions:
 
 
 class MainWindow:
-    """A compact status header, three settings tabs, and immediate actions."""
+    """Screenshot controls with movement details revealed only on request."""
 
     def __init__(
         self,
@@ -86,11 +92,16 @@ class MainWindow:
         self._notice: tk.StringVar = tk.StringVar(
             root, value=translator.text("settings.ready")
         )
+        self._movement_notice: tk.StringVar = tk.StringVar(root)
         self._status_cache: tuple[str, str, bool] | None = None
         self._build_style()
         root.title(translator.text("app.title"))
         root.protocol("WM_DELETE_WINDOW", self._request_hide)
         root.bind("<Unmap>", self._on_unmap, add="+")
+        # A window-local binding reveals existing controls on the Tk thread.
+        # It neither installs a global hotkey nor changes movement settings.
+        for sequence in MOVEMENT_REVEAL_SEQUENCES:
+            root.bind(sequence, self._reveal_movement_settings, add="+")
         if icon_path.is_file():
             root.iconbitmap(default=str(icon_path))
         root.columnconfigure(0, weight=1)
@@ -121,10 +132,11 @@ class MainWindow:
             command=self._toggle_mover,
         )
         self._toggle.grid(row=0, column=1, sticky="e", padx=(12, 0))
-        ttk.Label(
+        detail_label: ttk.Label = ttk.Label(
             body, textvariable=self._detail, style="Secondary.TLabel",
             wraplength=510,
-        ).grid(row=2, column=0, sticky="w", pady=(3, 10))
+        )
+        detail_label.grid(row=2, column=0, sticky="w", pady=(3, 10))
         self.settings_view: SettingsView = SettingsView(
             body, translator, settings, startup_supported
         )
@@ -150,11 +162,12 @@ class MainWindow:
             command=actions.apply,
         )
         self._apply.grid(row=0, column=3, sticky="e")
-        ttk.Label(
+        last_movement_label: ttk.Label = ttk.Label(
             body,
             textvariable=self._last_movement,
             style="Secondary.TLabel",
-        ).grid(row=5, column=0, sticky="w", pady=(2, 2))
+        )
+        last_movement_label.grid(row=5, column=0, sticky="w", pady=(2, 2))
         capture_row: ttk.Frame = ttk.Frame(body)
         capture_row.grid(row=6, column=0, sticky="ew", pady=2)
         capture_row.columnconfigure(0, weight=1)
@@ -176,13 +189,52 @@ class MainWindow:
             body, textvariable=self._notice, wraplength=510
         )
         self._notice_label.grid(row=8, column=0, sticky="ew")
+        self._movement_notice_label: ttk.Label = ttk.Label(
+            body, textvariable=self._movement_notice, wraplength=510
+        )
+        self._movement_notice_label.grid(row=9, column=0, sticky="ew")
+        self._movement_widgets: tuple[tk.Widget, ...] = (
+            status_row, detail_label, self._test, last_movement_label,
+            self._movement_notice_label,
+        )
+        self._set_movement_visible(False)
         # Geometry is derived from Tk's DPI-scaled font and widget requests.
         # No hard-coded physical window height clips controls at 150/200% DPI.
         root.update_idletasks()
-        width: int = max(root.winfo_reqwidth(), 590)
+        width: int = max(root.winfo_reqwidth(), MINIMUM_WINDOW_WIDTH)
         height: int = root.winfo_reqheight()
         root.minsize(width, height)
         root.geometry(f"{width}x{height}")
+
+    def _set_movement_visible(self, visible: bool) -> None:
+        """Change presentation only, preserving settings and running services.
+
+        Args:
+            visible (bool): Whether movement controls and status are exposed.
+
+        Returns:
+            None: Existing widget values survive concealment and restoration.
+        """
+        self.settings_view.set_movement_visible(visible)
+        for widget in self._movement_widgets:
+            if visible:
+                widget.grid()
+            else:
+                widget.grid_remove()
+        self.root.after_idle(self._fit_content)
+
+    def _reveal_movement_settings(self, event: tk.Event) -> str:
+        """Expose the mouse page for this visible window session.
+
+        Args:
+            event (tk.Event): Window-local Ctrl+Shift+S key press.
+
+        Returns:
+            str: Tk's break sentinel consumes the shortcut without editing text.
+        """
+        if self.root.state() in ("normal", "zoomed"):
+            self._set_movement_visible(True)
+        return "break"
 
     def _build_style(self) -> None:
         """Use Windows ttk rendering and point-sized scalable Segoe UI fonts.
@@ -209,6 +261,7 @@ class MainWindow:
         Returns:
             None: This method never destroys Tk or requests ordinary shutdown.
         """
+        self._set_movement_visible(False)
         self._actions.hide()
 
     def _on_unmap(self, event: tk.Event) -> None:
@@ -218,10 +271,15 @@ class MainWindow:
             event (tk.Event): Tk unmap event, possibly from a child widget.
 
         Returns:
-            None: Child unmaps and an already withdrawn root are ignored.
+            None: Child unmaps are ignored; root withdrawal conceals controls
+                without recursively invoking the tray hide handler.
         """
-        if event.widget is self.root and self.root.state() == "iconic":
-            self._actions.hide()
+        if event.widget is self.root:
+            state: str = self.root.state()
+            if state in ("iconic", "withdrawn"):
+                self._set_movement_visible(False)
+            if state == "iconic":
+                self._actions.hide()
 
     def _toggle_mover(self) -> None:
         """Pass the enabled checkbox value to the immediate-action handler.
@@ -248,6 +306,7 @@ class MainWindow:
         Returns:
             None: Background services and the root event loop remain alive.
         """
+        self._set_movement_visible(False)
         self.root.withdraw()
 
     def set_status(self, title: str, detail: str, enabled: bool) -> None:
@@ -296,6 +355,22 @@ class MainWindow:
         self._capture_status.set(message)
         self.root.after_idle(self._fit_content)
 
+    def set_movement_notice(self, message: str, error: bool = False) -> None:
+        """Retain movement results within the optionally visible controls.
+
+        Args:
+            message (str): Translated movement, input, or power diagnostic.
+            error (bool): Whether the result should use an error foreground.
+
+        Returns:
+            None: Hidden results cannot replace ordinary application notices.
+        """
+        self._movement_notice.set(message)
+        self._movement_notice_label.configure(
+            foreground="#a12424" if error else "#24364b"
+        )
+        self.root.after_idle(self._fit_content)
+
     def _fit_content(self) -> None:
         """Grow the visible window if wrapped status text needs more room.
 
@@ -306,6 +381,10 @@ class MainWindow:
         if self.root.state() == "withdrawn":
             return
         self.root.update_idletasks()
+        self.root.minsize(
+            max(self.root.winfo_reqwidth(), MINIMUM_WINDOW_WIDTH),
+            self.root.winfo_reqheight(),
+        )
         width: int = max(self.root.winfo_width(), self.root.winfo_reqwidth())
         height: int = max(self.root.winfo_height(), self.root.winfo_reqheight())
         if (width, height) != (

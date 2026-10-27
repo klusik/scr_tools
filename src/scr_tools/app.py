@@ -59,6 +59,12 @@ from scr_tools.windows.startup_registration import StartupRegistration
 POLL_INTERVAL_MILLISECONDS: int = 100
 MAX_EVENTS_PER_POLL: int = 100
 TEST_SETTLE_MILLISECONDS: int = 350
+MOVEMENT_NOTICE_KEYS: frozenset[str] = frozenset({
+    "configuration.idle_invalid", "configuration.distance_invalid",
+    "configuration.duration_invalid", "configuration.pattern_invalid",
+    "settings.invalid_number", "settings.session_only",
+    "native.hooks_failed", "native.power_failed",
+})
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
@@ -317,7 +323,7 @@ class Application:
             )
 
     def _notice(self, key: str, error: bool = False) -> None:
-        """Show a catalog-backed operational notice if the view is ready.
+        """Route translated notices to ordinary or concealed movement status.
 
         Args:
             key (str): Translation key without sensitive exception details.
@@ -327,7 +333,11 @@ class Application:
             None: Startup cleanup can safely call this before view creation.
         """
         if self._window is not None:
-            self._window.set_notice(self._translator.text(key), error=error)
+            message: str = self._translator.text(key)
+            if key.startswith("movement.") or key in MOVEMENT_NOTICE_KEYS:
+                self._window.set_movement_notice(message, error=error)
+            else:
+                self._window.set_notice(message, error=error)
 
     def apply_settings(self) -> None:
         """Validate, persist, and apply the complete settings form.
@@ -392,7 +402,7 @@ class Application:
         """Apply pause immediately, then try to persist the user's preference.
 
         Args:
-            enabled (bool): Desired Mouse Mover state from the window or tray.
+            enabled (bool): Desired Mouse Mover state from the revealed window.
 
         Returns:
             None: A storage failure never prevents the user from pausing input.
@@ -580,8 +590,6 @@ class Application:
         window: MainWindow | None = self._window
         if event.kind == "open" and window is not None:
             window.show()
-        elif event.kind == "toggle":
-            self.toggle_mover(not self.settings.mover_enabled)
         elif event.kind == "capture":
             self.capture_now()
         elif event.kind == "native_ready":
@@ -639,9 +647,12 @@ class Application:
                     self._translator.text(event.key, **display_values)
                 )
         elif event.kind == "error" and window is not None:
-            window.set_notice(
-                self._translator.text(event.key, **event.values), error=True
-            )
+            if event.key in MOVEMENT_NOTICE_KEYS:
+                self._notice(event.key, error=True)
+            else:
+                window.set_notice(
+                    self._translator.text(event.key, **event.values), error=True
+                )
         elif event.kind == "power" and event.values.get("success") == 0:
             self._notice("native.power_failed", error=True)
         self._last_status_second = -1

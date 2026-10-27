@@ -7,9 +7,13 @@ toolchain versions and observed result for each exercised item.
 
 ## Initial launch and input
 
-1. Start with no settings file. Confirm a visible compact window, registered
-   tray icon, default 100-second timeout, rectangle, 30 pixels, 1-second
-   duration, active Mouse Mover, system sleep prevention and display-wake off.
+1. Start with no settings file. Confirm a compact window showing Screenshots
+   and General only, without movement status, actions or hints. Confirm the
+   tray offers only Open SCR Tools, Capture screenshot and Exit SCR Tools.
+   Focus the window and press Ctrl+Shift+S. Confirm Mouse Mover, its enable
+   control, test action, countdown and last-movement status appear. Verify
+   the default 100-second timeout, rectangle, 30 pixels, 1-second duration,
+   active Mouse Mover, system sleep prevention and display-wake off.
 2. Type, move, click and scroll in another application. Confirm each form of
    activity resets the SCR Tools countdown. Confirm no typed contents appear
    in its logs or settings.
@@ -100,6 +104,17 @@ toolchain versions and observed result for each exercised item.
    session; the second request should activate the existing window.
 6. Test a separate interactive Windows session. It should get an independent
    instance scoped to that session, without bypassing desktop access rules.
+7. Reveal movement with Ctrl+Shift+S from both a settings entry and the main
+   window, including while maximized. Repeated presses must not hide controls,
+   type into entries or change preferences. The shortcut in another app must
+   not reveal SCR Tools. Confirm keyboard tab traversal skips concealed items.
+8. After revealing controls, exercise minimize, X, Alt+F4 and tray restoration
+   separately. Movement controls/status must be hidden after each restore;
+   pending edits must return unchanged after the next reveal. Applied movement
+   and sleep-prevention states must survive. Repeat with start-minimized,
+   second-instance restoration and a tray-registration failure. Background
+   movement results/errors must stay concealed, while capture failures remain
+   visible. Also check layout after revealing and hiding at 100/150/200% DPI.
 
 ## Settings, localization and installation
 

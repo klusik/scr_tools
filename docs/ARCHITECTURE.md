@@ -29,6 +29,15 @@ Scheduling checks are lightweight and use Tk's `after` mechanism; status
 updates are throttled so the displayed countdown is useful without repainting
 the entire window on each check. No worker calls Tk.
 
+Movement presentation is concealed by default. A window-local Ctrl+Shift+S
+binding reveals the existing mouse page, actions and status on the Tk thread.
+Close, minimize and withdrawal conceal them again. Notebook hiding and grid
+removal retain editor variables and never reconfigure the scheduler, native
+host or power requests. Movement notices have a separate concealed label so
+background completions and failures cannot replace ordinary window notices.
+The tray offers only open, capture and exit. Reveal visibility is transient
+view state and is not a persisted preference or a global hotkey registration.
+
 A dedicated native thread creates a hidden top-level window and runs the
 Windows message pump. It owns low-level hooks, `RegisterHotKey`, the native
 tray icon, WTS session notifications and `SetThreadExecutionState`. Queued
