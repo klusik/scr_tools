@@ -1,0 +1,23 @@
+# Project: SCR Tools
+# Repository: SCR-Tools (local Git-ready source)
+# File path: .gitattributes
+# Module Type: Repository policy
+# Purpose: Keep text and binary file handling consistent.
+# Responsibilities: Set maintained source line endings and binary assets.
+# Author: Rudolf Klusal
+# License: MIT
+
+* text=auto
+*.py text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.svg text eol=lf
+*.manifest text eol=lf
+*.ps1 text eol=crlf
+*.iss text eol=crlf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+LICENSE text eol=lf
+*.ico binary
+*.png binary
