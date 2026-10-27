@@ -1,0 +1,11 @@
+# Project: SCR Tools
+# Repository: SCR-Tools (local Git-ready source)
+# File path: requirements-build.txt
+# Module Type: Release dependency lock
+# Purpose: Install the Windows application packaging toolchain.
+# Responsibilities: Include runtime dependencies and PyInstaller.
+# Author: Rudolf Klusal
+# License: MIT
+
+-r requirements.txt
+PyInstaller==6.22.3

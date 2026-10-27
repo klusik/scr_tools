@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Project: SCR Tools
+Repository: SCR-Tools (local Git-ready source)
+File path: assets/icons/scr_tools.svg
+Module Type: Original vector artwork
+Purpose: Supply the editable source for the screen-and-cursor icon.
+Responsibilities: Match the geometry in scripts/generate_icon.py.
+Author: Rudolf Klusal
+License: MIT
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <rect x="8" y="8" width="240" height="240" rx="52" fill="#0B6BCB"/>
+  <rect x="45" y="55" width="166" height="116" rx="8"
+        fill="none" stroke="#ECF6FF" stroke-width="12"/>
+  <path d="M128 177V205M93 206H163" fill="none"
+        stroke="#ECF6FF" stroke-width="12"/>
+  <path d="M135 101L139 190L160 171L181 209L202 197L180 159L208 153Z"
+        fill="#FFFFFF" stroke="#08365E" stroke-width="6"
+        stroke-linejoin="round"/>
+</svg>

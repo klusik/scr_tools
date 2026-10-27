@@ -1,0 +1,10 @@
+# Project: SCR Tools
+# Repository: SCR-Tools (local Git-ready source)
+# File path: requirements.txt
+# Module Type: Runtime dependency lock
+# Purpose: Install the declared API baseline into system CPython 3.14.
+# Responsibilities: Declare the sole third-party runtime dependency.
+# Author: Rudolf Klusal
+# License: MIT
+
+Pillow==13.0.0

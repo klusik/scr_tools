@@ -1,0 +1,99 @@
+# Project: SCR Tools
+# Repository: SCR-Tools (local Git-ready source)
+# File path: .gitignore
+# Module Type: Repository policy
+# Purpose: Exclude generated and private files from version control.
+# Responsibilities: Keep source, resources and tests distributable.
+# Author: Rudolf Klusal
+# License: MIT
+
+# Python bytecode, metadata, caches and native extension build products.
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+*.egg
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.pytype/
+.hypothesis/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+*.cover
+*.prof
+*.lprof
+*.pstats
+
+# Environments are prohibited by project policy; do not accidentally commit one.
+.venv/
+venv/
+env/
+ENV/
+.conda/
+conda-meta/
+.python-version
+.uv/
+
+# IDE and editor state.
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.swp
+*.swo
+*~
+.ropeproject/
+
+# Windows/macOS desktop clutter.
+Thumbs.db
+Thumbs.db:encryptable
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+._*
+
+# Build/release stages and generated PyInstaller spec files.
+/build/
+/dist/
+/.build/
+/release/
+*.spec
+*.exe
+*.msi
+*.msix
+*.msixbundle
+*.zip
+*.7z
+*.tar
+*.tar.gz
+*.tgz
+*.whl
+
+# Runtime settings, captures, logs and temporary files.
+/config.json
+/settings.json
+/logs/
+/screenshots/
+SCRTools_*.png
+*.log
+*.log.*
+*.tmp
+*.temp
+*.bak
+*.corrupt-*
+.env
+.env.*
+/.cache/
+/tmp/
+/temp/
+
+# Maintained assets/icons, SVG/ICO files, JSON catalogs, .iss and docs remain tracked.
