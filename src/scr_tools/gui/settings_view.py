@@ -10,6 +10,7 @@
 """Settings widgets without access to native workers or persistence."""
 
 from dataclasses import replace
+from collections.abc import Callable
 from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, ttk
@@ -22,13 +23,15 @@ from scr_tools.configuration import (
     validate_settings,
 )
 from scr_tools.localization.translator import Translator
+from scr_tools.gui.compact_style import CompactStyle, IconName, PANEL_RADIUS
+from scr_tools.gui.context_help import ContextHelp, NotebookHints
 
 
 class SettingsView(ttk.Frame):
     """Present three small pages while keeping every Tk operation local.
 
     Attributes:
-        notebook (ttk.Notebook): Mouse, screenshot, and general settings pages.
+        notebook (ttk.Notebook): Screenshots, general, and optional mouse pages.
     """
 
     def __init__(
@@ -37,6 +40,7 @@ class SettingsView(ttk.Frame):
         translator: Translator,
         settings: Settings,
         startup_supported: bool,
+        presentation: CompactStyle,
     ) -> None:
         """Build and populate the editor on the Tk main thread.
 
@@ -45,6 +49,7 @@ class SettingsView(ttk.Frame):
             translator (Translator): Current locale with English fallback.
             settings (Settings): Applied values used to initialize controls.
             startup_supported (bool): Whether this is an installed executable.
+            presentation (CompactStyle): Root-owned images and control styles.
 
         Returns:
             None: Widgets and variables are initialized in place.
@@ -52,6 +57,22 @@ class SettingsView(ttk.Frame):
         super().__init__(parent)
         self._translator: Translator = translator
         self._startup_supported: bool = startup_supported
+        self._presentation: CompactStyle = presentation
+        self._help: list[ContextHelp] = []
+        self._page_help: dict[str, ContextHelp] = {}
+        # Place the rounded decoration independently of grid geometry. Keeping
+        # it behind the native notebook avoids image-element geometry cycles
+        # in Tcl/Tk 9 while preserving native tab focus and hit testing.
+        self._surface: tk.Canvas = tk.Canvas(
+            self, background=presentation.background,
+            borderwidth=0, highlightthickness=0, takefocus=False,
+        )
+        self._surface.place(x=0, y=0, relwidth=1, relheight=1)
+        self._surface_shape: int = self._surface.create_polygon(
+            (0, 0, 1, 0, 1, 1, 0, 1), fill=presentation.panel,
+            outline="", smooth=True,
+        )
+        self.bind("<Configure>", self._paint_surface, add="+")
         self._idle: tk.StringVar = tk.StringVar(self)
         self._pattern: tk.StringVar = tk.StringVar(self)
         self._distance: tk.StringVar = tk.StringVar(self)
@@ -79,25 +100,150 @@ class SettingsView(ttk.Frame):
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
         self.notebook: ttk.Notebook = ttk.Notebook(self)
-        self.notebook.grid(row=0, column=0, sticky="nsew")
+        self.notebook.grid(row=0, column=0, sticky="nsew", padx=6, pady=6)
+        self._help.append(NotebookHints(self.notebook))
+        self.notebook.bind("<<NotebookTabChanged>>", self._on_tab_changed, add="+")
         self._build_mouse_page()
         self._build_screenshot_page()
         self._build_general_page()
+        self.set_movement_visible(False)
         self.load(settings)
 
-    def _page(self, title_key: str) -> ttk.Frame:
+    def _paint_surface(self, event: tk.Event) -> None:
+        """Resize the quietly rounded backdrop without requesting layout.
+
+        Args:
+            event (tk.Event): Editor size in current physical pixels.
+
+        Returns:
+            None: Native content stays inset from the decorative curved edge.
+        """
+        width: int = event.width
+        height: int = event.height
+        radius: int = min(self._presentation.pixels(PANEL_RADIUS),
+                          width // 2, height // 2)
+        self._surface.coords(
+            self._surface_shape,
+            radius, 0, width - radius, 0, width, 0, width, radius,
+            width, height - radius, width, height, width - radius, height,
+            radius, height, 0, height, 0, height - radius, 0, radius, 0, 0,
+        )
+
+    def _on_tab_changed(self, event: tk.Event) -> None:
+        """Notify the window after native notebook selection changes.
+
+        Args:
+            event (tk.Event): Notebook page-selection notification.
+
+        Returns:
+            None: The window fits native requests on its next idle callback.
+        """
+        self.event_generate("<<SettingsLayoutChanged>>")
+
+    def set_movement_visible(self, visible: bool) -> None:
+        """Reveal or conceal the mouse page without changing its form values.
+
+        Args:
+            visible (bool): Whether to expose and select the mouse page.
+
+        Returns:
+            None: Concealment selects Screenshots if the mouse page was active.
+                Hidden controls retain both applied and pending edits.
+        """
+        if visible:
+            if str(self._mouse_page) not in self.notebook.tabs():
+                self.notebook.insert(
+                    0, self._mouse_page,
+                    text=self._translator.text("tab.mouse"),
+                    image=self._presentation.control_images("mouse"), compound="image",
+                )
+            self.notebook.select(self._mouse_page)
+        else:
+            for help_popup in self._help:
+                help_popup.close()
+            if self.notebook.select() == str(self._mouse_page):
+                self.notebook.select(self._screenshot_page)
+            if str(self._mouse_page) in self.notebook.tabs():
+                # Forget removes the page from notebook size requests, unlike
+                # hide. The existing frame and all its variables stay alive.
+                self.notebook.forget(self._mouse_page)
+        self.event_generate("<<SettingsLayoutChanged>>")
+
+    def _page(self, title_key: str, icon: IconName) -> ttk.Frame:
         """Create a notebook page with consistent two-column sizing.
 
         Args:
             title_key (str): Catalog key used for its tab caption.
+            icon (IconName): Semantic line icon shown in the compact tab strip.
 
         Returns:
             ttk.Frame: A padded page ready for labels and controls.
         """
-        page: ttk.Frame = ttk.Frame(self.notebook, padding=(12, 12))
+        page: ttk.Frame = ttk.Frame(
+            self.notebook, padding=(10, 8), style="Panel.TFrame"
+        )
         page.columnconfigure(1, weight=1)
-        self.notebook.add(page, text=self._translator.text(title_key))
+        self.notebook.add(
+            page, text=self._translator.text(title_key),
+            image=self._presentation.control_images(icon), compound="image",
+        )
         return page
+
+    def _heading(self, page: ttk.Frame, title_key: str,
+                 help_keys: tuple[str, ...]) -> None:
+        """Place a concise page title and keyboard-accessible context help.
+
+        Args:
+            page (ttk.Frame): Destination page with two field columns.
+            title_key (str): Translated page-heading key.
+            help_keys (tuple[str, ...]): Ordered translated help paragraphs.
+
+        Returns:
+            None: Long guidance is available without occupying the form.
+        """
+        header: ttk.Frame = ttk.Frame(page, style="Panel.TFrame")
+        header.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 8))
+        header.columnconfigure(0, weight=1)
+        ttk.Label(
+            header, text=self._translator.text(title_key), style="PageTitle.TLabel"
+        ).grid(row=0, column=0, sticky="w")
+        button: ttk.Button = ttk.Button(
+            header, text=self._translator.text("button.help_symbol"),
+            image=self._presentation.control_images("help"), compound="image",
+            style="Help.TButton",
+        )
+        button.grid(row=0, column=1, sticky="e")
+        help_popup: ContextHelp = ContextHelp(
+            button, "\n\n".join(self._translator.text(key) for key in help_keys),
+            click=True,
+        )
+        self._help.append(help_popup)
+        self._page_help[title_key] = help_popup
+        button.configure(command=help_popup.toggle)
+        button.bind("<Return>", lambda event: help_popup.toggle())
+
+    def _switch(self, page: ttk.Frame, row: int, key: str,
+                variable: tk.BooleanVar,
+                command: Callable[[], None] | None = None) -> ttk.Checkbutton:
+        """Align a binary preference with a native keyboard-operated switch.
+
+        Args:
+            page (ttk.Frame): Destination settings page.
+            row (int): Zero-based grid row.
+            key (str): Translated field caption and native control label.
+            variable (tk.BooleanVar): Existing preference variable.
+            command (Callable[[], None] | None): Optional dependency refresh.
+
+        Returns:
+            ttk.Checkbutton: Native checkbutton with a switch indicator.
+        """
+        self._label(page, row, key)
+        control: ttk.Checkbutton = ttk.Checkbutton(
+            page, text=self._translator.text(key), variable=variable,
+            command=command, style="Indicator.Switch.TCheckbutton",
+        )
+        control.grid(row=row, column=1, sticky="e", pady=4)
+        return control
 
     def _label(self, page: ttk.Frame, row: int, key: str) -> None:
         """Place a translated field label in the page's first column.
@@ -120,55 +266,48 @@ class SettingsView(ttk.Frame):
         Returns:
             None: The notebook gains one populated page.
         """
-        page: ttk.Frame = self._page("tab.mouse")
-        self._label(page, 0, "settings.idle")
+        self._mouse_page: ttk.Frame = self._page("tab.mouse", "mouse")
+        page: ttk.Frame = self._mouse_page
+        self._heading(page, "tab.mouse", ("settings.movement_hint",))
+        self._label(page, 1, "settings.idle")
         ttk.Spinbox(
-            page, from_=10, to=86400, textvariable=self._idle, width=12
-        ).grid(row=0, column=1, sticky="w", pady=5)
-        self._label(page, 1, "settings.pattern")
-        ttk.Combobox(
-            page,
-            textvariable=self._pattern,
-            values=tuple(self._patterns.values()),
-            state="readonly",
-            width=20,
-        ).grid(row=1, column=1, sticky="w", pady=5)
-        self._label(page, 2, "settings.distance")
+            page, from_=10, to=86400, textvariable=self._idle, width=9
+        ).grid(row=1, column=1, sticky="e", pady=5)
+        self._label(page, 2, "settings.pattern")
+        patterns: ttk.Frame = ttk.Frame(page, style="Panel.TFrame")
+        patterns.grid(row=2, column=1, sticky="e", pady=5)
+        for column, pattern in enumerate(self._patterns):
+            button: ttk.Radiobutton = ttk.Radiobutton(
+                patterns, text=self._patterns[pattern],
+                image=self._presentation.control_images(pattern), compound="image",
+                variable=self._pattern, value=self._patterns[pattern],
+                style="Mode.TRadiobutton",
+            )
+            button.grid(row=0, column=column, padx=(4, 0))
+            self._help.append(ContextHelp(button, self._patterns[pattern]))
+        self._label(page, 3, "settings.distance")
         ttk.Spinbox(
-            page, from_=1, to=1000, textvariable=self._distance, width=12
-        ).grid(row=2, column=1, sticky="w", pady=5)
-        self._label(page, 3, "settings.duration")
+            page, from_=1, to=1000, textvariable=self._distance, width=9
+        ).grid(row=3, column=1, sticky="e", pady=5)
+        self._label(page, 4, "settings.duration")
         ttk.Spinbox(
             page,
             from_=0.2,
             to=10.0,
             increment=0.1,
             textvariable=self._duration,
-            width=12,
-        ).grid(row=3, column=1, sticky="w", pady=5)
+            width=9,
+        ).grid(row=4, column=1, sticky="e", pady=5)
         ttk.Separator(page).grid(
-            row=4, column=0, columnspan=2, sticky="ew", pady=9
+            row=5, column=0, columnspan=2, sticky="ew", pady=9
         )
-        ttk.Checkbutton(
-            page,
-            text=self._translator.text("settings.prevent_sleep"),
-            variable=self._prevent_sleep,
-            command=self._update_display_control,
-        ).grid(row=5, column=0, columnspan=2, sticky="w", pady=4)
-        self._display_control: ttk.Checkbutton = ttk.Checkbutton(
-            page,
-            text=self._translator.text("settings.display_awake"),
-            variable=self._display_awake,
+        self._sleep_control: ttk.Checkbutton = self._switch(
+            page, 6, "settings.prevent_sleep", self._prevent_sleep,
+            self._update_display_control,
         )
-        self._display_control.grid(
-            row=6, column=0, columnspan=2, sticky="w", pady=4, padx=(20, 0)
+        self._display_control: ttk.Checkbutton = self._switch(
+            page, 7, "settings.display_awake", self._display_awake
         )
-        ttk.Label(
-            page,
-            text=self._translator.text("settings.movement_hint"),
-            style="Secondary.TLabel",
-            wraplength=475,
-        ).grid(row=7, column=0, columnspan=2, sticky="w", pady=(10, 0))
 
     def _build_screenshot_page(self) -> None:
         """Create noninteractive capture preferences and a folder picker.
@@ -176,43 +315,59 @@ class SettingsView(ttk.Frame):
         Returns:
             None: The notebook gains its screenshot page.
         """
-        page: ttk.Frame = self._page("tab.screenshots")
-        self._label(page, 0, "settings.hotkey")
-        ttk.Entry(page, textvariable=self._hotkey, width=27).grid(
-            row=0, column=1, sticky="ew", pady=5
+        self._screenshot_page: ttk.Frame = self._page("tab.screenshots", "camera")
+        page: ttk.Frame = self._screenshot_page
+        self._heading(page, "tab.screenshots", (
+            "settings.hotkey_hint", "settings.screenshot_hint",
+        ))
+        ttk.Label(
+            page, text=self._translator.text("settings.hotkey"),
+            image=self._presentation.icon("keyboard"), compound="left",
+        ).grid(row=1, column=0, sticky="w", padx=(0, 12), pady=8)
+        ttk.Entry(page, textvariable=self._hotkey, width=24).grid(
+            row=1, column=1, sticky="e", pady=8
         )
         ttk.Label(
-            page,
-            text=self._translator.text("settings.hotkey_hint"),
-            style="Secondary.TLabel",
-            wraplength=450,
-        ).grid(row=1, column=0, columnspan=2, sticky="w", pady=(0, 9))
-        self._label(page, 2, "settings.capture_mode")
-        ttk.Combobox(
-            page,
-            textvariable=self._mode,
-            values=tuple(self._modes.values()),
-            state="readonly",
-            width=30,
-        ).grid(row=2, column=1, sticky="ew", pady=5)
-        self._label(page, 3, "settings.folder")
-        folder_row: ttk.Frame = ttk.Frame(page)
-        folder_row.columnconfigure(0, weight=1)
-        folder_row.grid(row=3, column=1, sticky="ew", pady=5)
-        ttk.Entry(folder_row, textvariable=self._folder).grid(
-            row=0, column=0, sticky="ew"
+            page, text=self._translator.text("settings.capture_mode"),
+            image=self._presentation.icon("current"), compound="left",
+        ).grid(row=2, column=0, sticky="w", padx=(0, 12), pady=8)
+        modes: ttk.Frame = ttk.Frame(page, style="Panel.TFrame")
+        modes.grid(row=2, column=1, sticky="e", pady=8)
+        self._mode_controls: dict[ScreenshotMode, ttk.Radiobutton] = {}
+        for column, mode in enumerate(self._modes):
+            control: ttk.Radiobutton = ttk.Radiobutton(
+                modes, text=self._modes[mode],
+                image=self._presentation.control_images(mode), compound="image",
+                variable=self._mode, value=self._modes[mode],
+                style="Mode.TRadiobutton",
+            )
+            control.grid(row=0, column=column, padx=(4, 0))
+            self._mode_controls[mode] = control
+            self._help.append(ContextHelp(control, self._modes[mode]))
+        folder_row: ttk.Frame = ttk.Frame(page, style="Panel.TFrame")
+        folder_row.columnconfigure(1, weight=1)
+        folder_row.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(12, 4))
+        label: ttk.Label = ttk.Label(
+            folder_row, text=self._translator.text("settings.folder"),
+            image=self._presentation.icon("folder"), compound="image",
         )
-        ttk.Button(
+        label.grid(row=0, column=0, padx=(0, 8))
+        self._help.append(ContextHelp(label, self._translator.text("settings.folder")))
+        self._folder_control: ttk.Entry = ttk.Entry(
+            folder_row, textvariable=self._folder, width=1
+        )
+        self._folder_control.grid(
+            row=0, column=1, sticky="ew"
+        )
+        browse: ttk.Button = ttk.Button(
             folder_row,
             text=self._translator.text("button.browse"),
             command=self._browse_folder,
-        ).grid(row=0, column=1, padx=(6, 0))
-        ttk.Label(
-            page,
-            text=self._translator.text("settings.screenshot_hint"),
-            style="Secondary.TLabel",
-            wraplength=475,
-        ).grid(row=4, column=0, columnspan=2, sticky="w", pady=(12, 0))
+            image=self._presentation.control_images("browse"), compound="image",
+            style="Panel.Icon.TButton",
+        )
+        browse.grid(row=0, column=2, padx=(6, 0))
+        self._help.append(ContextHelp(browse, self._translator.text("button.browse")))
 
     def _build_general_page(self) -> None:
         """Create launch preferences and explain source-mode startup.
@@ -220,53 +375,28 @@ class SettingsView(ttk.Frame):
         Returns:
             None: The notebook gains its general page.
         """
-        page: ttk.Frame = self._page("tab.general")
-        ttk.Checkbutton(
-            page,
-            text=self._translator.text("settings.minimized"),
-            variable=self._minimized,
-        ).grid(row=0, column=0, columnspan=2, sticky="w", pady=5)
-        startup: ttk.Checkbutton = ttk.Checkbutton(
-            page,
-            text=self._translator.text("settings.startup"),
-            variable=self._startup,
+        page: ttk.Frame = self._page("tab.general", "settings")
+        self._heading(page, "tab.general", (
+            "settings.startup_supported" if self._startup_supported
+            else "settings.startup_source",
+            "settings.tray_hint", "settings.privacy_hint", "settings.ready",
+        ))
+        self._startup_control: ttk.Checkbutton = self._switch(
+            page, 1, "settings.startup", self._startup
         )
-        startup.grid(row=1, column=0, columnspan=2, sticky="w", pady=5)
         if not self._startup_supported:
-            startup.state(["disabled"])
-        ttk.Label(
-            page,
-            text=self._translator.text(
-                "settings.startup_supported"
-                if self._startup_supported
-                else "settings.startup_source"
-            ),
-            style="Secondary.TLabel",
-            wraplength=475,
-        ).grid(row=2, column=0, columnspan=2, sticky="w", pady=(0, 10))
+            self._startup_control.state(["disabled"])
+        self._minimized_control: ttk.Checkbutton = self._switch(
+            page, 2, "settings.minimized", self._minimized
+        )
         self._label(page, 3, "settings.language")
         ttk.Combobox(
             page,
             textvariable=self._language,
             values=tuple(self._languages.values()),
             state="readonly",
-            width=22,
-        ).grid(row=3, column=1, sticky="w", pady=5)
-        ttk.Separator(page).grid(
-            row=4, column=0, columnspan=2, sticky="ew", pady=9
-        )
-        ttk.Label(
-            page,
-            text=self._translator.text("settings.tray_hint"),
-            style="Secondary.TLabel",
-            wraplength=475,
-        ).grid(row=5, column=0, columnspan=2, sticky="w", pady=(5, 8))
-        ttk.Label(
-            page,
-            text=self._translator.text("settings.privacy_hint"),
-            style="Secondary.TLabel",
-            wraplength=475,
-        ).grid(row=6, column=0, columnspan=2, sticky="w", pady=5)
+            width=24,
+        ).grid(row=3, column=1, sticky="e", pady=5)
 
     def _update_display_control(self) -> None:
         """Reflect that display requests require system-sleep prevention.
@@ -293,6 +423,7 @@ class SettingsView(ttk.Frame):
         )
         if selected:
             self._folder.set(selected)
+            self._folder_control.xview_moveto(1)
 
     def load(self, settings: Settings) -> None:
         """Replace editor values with successfully applied settings.
@@ -312,6 +443,9 @@ class SettingsView(ttk.Frame):
         self._hotkey.set(settings.screenshot_hotkey)
         self._mode.set(self._modes[settings.screenshot_mode])
         self._folder.set(settings.screenshot_folder)
+        # Keep the useful destination suffix visible when the absolute path
+        # exceeds the field, while retaining normal full-path editing.
+        self._folder_control.xview_moveto(1)
         self._minimized.set(settings.start_minimized)
         self._startup.set(settings.start_with_windows)
         self._language.set(self._languages.get(

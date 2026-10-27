@@ -18,7 +18,7 @@ remain under release; each invocation's private stage is removed in finally.
 .PARAMETER InstallDependencies
 Explicitly allow pip to install the pinned requirements into system Python.
 .PARAMETER InnoCompiler
-Optional full path to ISCC.exe, overriding PATH and installation discovery.
+Optional compiler path override. Normally ISCC is resolved from PATH first.
 .OUTPUTS
 Console progress and versioned files in the release directory.
 #>
@@ -36,7 +36,7 @@ function Invoke-CheckedTool {
     .SYNOPSIS
     Run one native command, retain its output and enforce its exit status.
     .PARAMETER FilePath
-    Absolute executable path validated by the caller.
+    Absolute native executable or command-wrapper path validated by the caller.
     .PARAMETER Arguments
     Native arguments, each passed separately without shell interpolation.
     .PARAMETER Step
@@ -80,11 +80,11 @@ function Invoke-CheckedTool {
 function Find-InnoCompiler {
     <#
     .SYNOPSIS
-    Resolve an installed Inno Setup 6 or 7 console compiler.
+    Resolve ISCC from PATH, then fall back to installed Inno Setup 6 or 7.
     .PARAMETER RequestedPath
     Optional user-supplied compiler path, which must be valid if specified.
     .OUTPUTS
-    System.String: Absolute validated ISCC.exe path.
+    System.String: Absolute validated compiler or native wrapper path.
     #>
     [OutputType([string])]
     param([string]$RequestedPath)
@@ -94,7 +94,10 @@ function Find-InnoCompiler {
         $candidates.Add($RequestedPath)
     }
     else {
-        $command = Get-Command 'ISCC.exe' -ErrorAction SilentlyContinue
+        # Resolve native executables/wrappers through PATH and PATHEXT. A
+        # PowerShell alias or function must not replace the compiler command.
+        $command = Get-Command 'ISCC' -CommandType Application `
+            -ErrorAction SilentlyContinue
         if ($command) {
             $candidates.Add($command.Source)
         }
@@ -132,13 +135,25 @@ function Find-InnoCompiler {
             continue
         }
         $resolved = (Resolve-Path -LiteralPath $candidate).Path
-        $majorVersion = (Get-Item -LiteralPath $resolved).VersionInfo.FileMajorPart
-        if ($majorVersion -in @(6, 7)) {
+        # Installed compilers and PATH wrappers can have absent/zero PE file
+        # version metadata. Ask the compiler itself instead. Inno 6 returns
+        # exit code 1 for /?; its banner, rather than that help exit code, is
+        # the version check. The later compile still requires exit code 0.
+        $previousPreference = $ErrorActionPreference
+        try {
+            $ErrorActionPreference = 'Continue'
+            $banner = & $resolved '/?' 2>&1 | Out-String
+        }
+        finally {
+            $ErrorActionPreference = $previousPreference
+        }
+        if ($banner -match '(?m)^Inno Setup (6|7)(?:\.\d+)* Command-Line Compiler') {
             return $resolved
         }
     }
-    throw ('Inno Setup 6 or 7 ISCC.exe was not found. Install Inno Setup ' +
-        'or pass -InnoCompiler "C:\path\to\ISCC.exe".')
+    throw ('No usable Inno Setup 6 or 7 compiler was found. Put ISCC.exe ' +
+        'on PATH and open a new PowerShell console, or install Inno Setup. ' +
+        'The optional -InnoCompiler override must identify a valid compiler.')
 }
 
 $projectRoot = $PSScriptRoot

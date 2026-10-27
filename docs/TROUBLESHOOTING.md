@@ -15,7 +15,17 @@ If tray registration fails, SCR Tools reports the failure and keeps its window
 accessible instead of hiding the only available controls. Explorer restarts
 are handled by re-registering the icon.
 
+## Mouse Mover settings are hidden
+
+Focus the SCR Tools window and press **Ctrl+Shift+S**. This reveals the
+movement page, enable/pause control, test action and status. Minimize, Close,
+Alt+F4 and hiding to tray conceal them again, including after restoration.
+Their visibility does not change saved preferences, pending edits, background
+movement or sleep prevention. The tray has no movement toggle.
+
 ## The timer keeps resetting or movement does not start
+
+First reveal movement controls with **Ctrl+Shift+S** in the focused window.
 
 If a 10-second countdown reaches 9/10, immediately restarts at 0/10 and
 **Last movement** stays **Never**, update to the corrected source/build and
@@ -150,6 +160,19 @@ Use `docs/BUILD.md`. `deploy.ps1` requires the exact interpreter/dependency
 baseline and Inno Setup 6 or 7. It exits on a failing native command and keeps
 diagnostics under `release/buildlogs/`. No final-success message is emitted
 if the build or owned-stage cleanup fails.
+
+No compiler path option is normally needed. Run `Get-Command ISCC` in the
+same console to check `PATH`. Add the Inno compiler folder to `PATH` and
+open a new console if necessary; standard/registered installations are
+also searched automatically. Compiler version checking uses its `/?`
+banner, so missing or zero Windows file-version metadata is supported.
+
+An `AssertionError` at PyInstaller's `root_element.tagName == "assembly"`
+indicates an incompatible generated manifest. The original metadata writer
+serialized it as `ns0:assembly` and prefixed security elements as well. Use
+the corrected `scripts/release_metadata.py`, which preserves the template's
+scoped namespaces and unprefixed names, then rerun the normal build. Changing
+Pillow or Inno Setup does not repair that XML serialization defect.
 
 The installer asks for a running instance to close. Choose **Exit SCR Tools**
 in the tray, then retry. Clicking the main window's X only hides it. Do not

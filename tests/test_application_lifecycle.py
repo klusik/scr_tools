@@ -24,6 +24,7 @@ from scr_tools.core.movement_controller import MovementController
 from scr_tools.core.screenshot_service import ScreenshotService
 from scr_tools.events import AppEvent
 from scr_tools.gui.main_window import MainWindow, WindowActions
+from scr_tools.gui.settings_view import SettingsView
 from scr_tools.localization.translator import Translator
 from scr_tools.windows.input_monitor import InputMonitor, LLMHF_INJECTED
 from scr_tools.windows.mouse_injector import MouseInjector
@@ -276,6 +277,33 @@ class ApplicationLifecycleTests(unittest.TestCase):
         self.assertFalse(movement_gate.accessible_desktop())
         self.assertTrue(capture_gate.accessible_desktop())
 
+    def test_movement_events_do_not_replace_ordinary_notices(self) -> None:
+        """Background results remain in the optionally visible movement area."""
+        for event in (
+            AppEvent("movement_done", "movement.completed", {"completed": 1}),
+            AppEvent("movement_done", "movement.failed"),
+            AppEvent("error", "native.hooks_failed"),
+            AppEvent("power", "native.power_failed", {"success": 0}),
+        ):
+            with self.subTest(key=event.key):
+                self.application._handle_event(event)
+                self.window.set_movement_notice.assert_called_with(
+                    Translator().text(event.key),
+                    error=event.key != "movement.completed",
+                )
+        self.window.set_notice.assert_not_called()
+        self.movement.stop.assert_not_called()
+
+    def test_capture_errors_remain_visible(self) -> None:
+        """Concealed movement diagnostics cannot suppress screenshot errors."""
+        self.application._handle_event(
+            AppEvent("error", "native.capture_unavailable")
+        )
+        self.window.set_notice.assert_called_once_with(
+            Translator().text("native.capture_unavailable"), error=True
+        )
+        self.window.set_movement_notice.assert_not_called()
+
 
 class WindowLifecycleTests(unittest.TestCase):
     """Exercise close/minimize routing without an actual graphical display."""
@@ -291,6 +319,8 @@ class WindowLifecycleTests(unittest.TestCase):
             self.other_action, self.other_action, self.other_action,
             self.other_action, self.other_action, self.hide,
         )
+        self.view.settings_view = MagicMock(spec=SettingsView)
+        self.view._movement_widgets = ()
 
     def test_x_and_alt_f4_delegate_to_tray_hide(self) -> None:
         """The window-close handler never destroys the application."""

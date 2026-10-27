@@ -1,0 +1,539 @@
+<!--
+Project: SCR Tools
+Repository: SCR-Tools (local Git-ready source)
+File path: docs/design/compact-settings-proposal.html
+Module Type: Interactive design proposal
+Purpose: Compare two compact settings layouts before changing the Tk interface.
+Responsibilities: Preview navigation, switches, help and transient mover visibility.
+Author: Rudolf Klusal
+License: MIT
+-->
+<style>
+#scr-design-preview {
+  color-scheme: light dark;
+  --scr-surface: light-dark(#f7f8fa, #202329);
+  --scr-chrome: light-dark(#eef0f3, #272b32);
+  --scr-text: light-dark(#242c38, #e5e9ef);
+  --scr-muted: light-dark(#657080, #a8b2bf);
+  --scr-field: light-dark(#ffffff, #30353d);
+  --scr-line: light-dark(#dce1e8, #3b424c);
+  --scr-accent: light-dark(#426b91, #8aafcf);
+  --scr-tint: light-dark(#e6edf4, #303f4d);
+  --scr-shadow: light-dark(#182c4214, #00000030);
+  font: 14px/1.45 "Segoe UI", system-ui, sans-serif;
+  color: var(--scr-text);
+}
+#scr-design-preview .scr-stage {
+  min-height: 550px;
+  padding: 48px 14px 24px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+#scr-design-preview .scr-window {
+  --scr-radius: 8px;
+  --scr-gap: 12px;
+  width: 100%;
+  max-width: 530px;
+  background: var(--scr-surface);
+  border: 1px solid var(--scr-line);
+  border-radius: var(--scr-radius);
+  box-shadow: 0 8px 28px var(--scr-shadow);
+  overflow: clip;
+  text-align: left;
+}
+#scr-design-preview .scr-window.scr-expanded { max-width: 100%; }
+#scr-design-preview .scr-window *,
+#scr-design-preview .scr-window *::before,
+#scr-design-preview .scr-window *::after { box-sizing: border-box; }
+#scr-design-preview [hidden] { display: none !important; }
+#scr-design-preview button,
+#scr-design-preview input,
+#scr-design-preview select { font: inherit; color: inherit; }
+#scr-design-preview button {
+  min-width: 28px;
+  min-height: 28px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 5px 8px;
+}
+#scr-design-preview button:hover { background: var(--scr-tint); }
+#scr-design-preview :is(button, input, select, summary):focus-visible {
+  outline: 2px solid var(--scr-accent);
+  outline-offset: 3px;
+}
+#scr-design-preview .scr-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px 5px 12px;
+  background: var(--scr-chrome);
+}
+#scr-design-preview .scr-titlebar > span:first-of-type {
+  font-weight: 500;
+  flex: 1;
+}
+#scr-design-preview .scr-version {
+  font-size: 12px;
+  color: var(--scr-muted);
+  padding-right: 5px;
+}
+#scr-design-preview .scr-layout { display: grid; }
+#scr-design-preview .scr-nav {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 9px 15px;
+  background: var(--scr-chrome);
+}
+#scr-design-preview .scr-nav button {
+  position: relative;
+  padding: 7px 12px;
+  min-height: 32px;
+}
+#scr-design-preview .scr-nav button[aria-selected="true"] {
+  background: var(--scr-tint);
+  box-shadow: inset 0 -2px var(--scr-accent);
+}
+#scr-design-preview .scr-nav .scr-nav-label { display: none; }
+#scr-design-preview .scr-window.scr-labels .scr-nav-label { display: inline; }
+#scr-design-preview .scr-rail .scr-layout { grid-template-columns: 55px minmax(0, 1fr); }
+#scr-design-preview .scr-rail .scr-nav {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 14px 7px;
+}
+#scr-design-preview .scr-rail .scr-nav button { padding: 9px 6px; }
+#scr-design-preview .scr-rail .scr-nav button[aria-selected="true"] {
+  box-shadow: inset 2px 0 var(--scr-accent);
+}
+#scr-design-preview .scr-rail.scr-labels .scr-layout { grid-template-columns: 128px minmax(0, 1fr); }
+#scr-design-preview .scr-main { min-width: 0; padding: 16px 20px 6px; }
+#scr-design-preview .scr-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+#scr-design-preview .scr-heading h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+}
+#scr-design-preview .scr-help {
+  padding: 2px;
+  min-width: 24px;
+  color: var(--scr-muted);
+}
+#scr-design-preview .scr-help:hover { background: transparent; color: var(--scr-accent); }
+#scr-design-preview .scr-help-text {
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  background: var(--scr-chrome);
+  border-radius: 5px;
+  color: var(--scr-muted);
+  font-size: 12px;
+}
+#scr-design-preview .scr-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-block: var(--scr-gap);
+  min-width: 0;
+}
+#scr-design-preview .scr-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  white-space: nowrap;
+}
+#scr-design-preview .scr-label > :first-child { color: var(--scr-muted); }
+#scr-design-preview .scr-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+#scr-design-preview .scr-choice button {
+  min-width: 38px;
+  min-height: 32px;
+}
+#scr-design-preview .scr-choice button[aria-pressed="true"] {
+  background: var(--scr-tint);
+  color: var(--scr-accent);
+  box-shadow: inset 0 -2px var(--scr-accent);
+}
+#scr-design-preview .scr-shortcut {
+  background: var(--scr-field);
+  border: 1px solid var(--scr-line);
+  border-radius: 5px;
+  padding: 6px 9px;
+  white-space: nowrap;
+  font-size: 12px;
+}
+#scr-design-preview .scr-folder { gap: 8px; }
+#scr-design-preview .scr-path {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+#scr-design-preview .scr-path span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--scr-muted);
+}
+#scr-design-preview .scr-divider { border: 0; border-top: 1px solid var(--scr-line); margin: 4px 0; }
+#scr-design-preview .scr-switch {
+  appearance: none;
+  width: 28px;
+  height: 16px;
+  flex: 0 0 28px;
+  margin: 0;
+  border: 1px solid var(--scr-line);
+  border-radius: 12px;
+  background: var(--scr-line);
+  position: relative;
+}
+#scr-design-preview .scr-switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--scr-field);
+}
+#scr-design-preview .scr-switch:checked { background: var(--scr-accent); border-color: var(--scr-accent); }
+#scr-design-preview .scr-switch:checked::after { left: 15px; }
+#scr-design-preview .scr-switch:disabled { opacity: .45; }
+#scr-design-preview select,
+#scr-design-preview input[type="number"] {
+  background: var(--scr-field);
+  border: 1px solid var(--scr-line);
+  border-radius: 5px;
+  padding: 5px 7px;
+  min-width: 0;
+  max-width: 100%;
+}
+#scr-design-preview input[type="number"] { width: 72px; }
+#scr-design-preview .scr-number { display: flex; align-items: center; gap: 7px; }
+#scr-design-preview .scr-unit { font-size: 12px; color: var(--scr-muted); }
+#scr-design-preview .scr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  padding-block: 14px 10px;
+}
+#scr-design-preview .scr-capture {
+  border: 1px solid var(--scr-line);
+  min-height: 32px;
+  padding-inline: 12px;
+}
+#scr-design-preview .scr-save {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--scr-muted);
+}
+#scr-design-preview .scr-apply {
+  border: 1px solid var(--scr-line);
+  min-height: 32px;
+}
+#scr-design-preview .scr-status {
+  min-height: 35px;
+  padding: 8px 0 12px;
+  font-size: 12px;
+  color: var(--scr-muted);
+  overflow-wrap: anywhere;
+}
+#scr-design-preview .scr-tray {
+  width: 100%;
+  max-width: 530px;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--scr-surface);
+  border: 1px solid var(--scr-line);
+  border-radius: 8px;
+}
+#scr-design-preview .scr-tray button { border: 1px solid var(--scr-line); }
+#scr-design-preview .scr-movement-result { color: var(--scr-muted); font-size: 12px; }
+@media (max-width: 430px) {
+  #scr-design-preview .scr-stage { padding-inline: 0; min-height: 650px; }
+  #scr-design-preview .scr-main { padding-inline: 12px; }
+  #scr-design-preview .scr-row { flex-wrap: wrap; }
+  #scr-design-preview .scr-label { white-space: normal; }
+  #scr-design-preview .scr-rail.scr-labels .scr-layout { grid-template-columns: 55px minmax(0, 1fr); }
+  #scr-design-preview .scr-rail.scr-labels .scr-nav-label { display: none; }
+  #scr-design-preview .scr-version { display: none; }
+}
+@media (pointer: coarse) {
+  #scr-design-preview button { min-width: 44px; min-height: 44px; }
+  #scr-design-preview .scr-row { min-height: 48px; }
+  #scr-design-preview input:not(.scr-switch),
+  #scr-design-preview select { font-size: 16px; }
+}
+@media (forced-colors: active) {
+  #scr-design-preview .scr-switch { appearance: auto; }
+  #scr-design-preview .scr-switch::after { display: none; }
+}
+</style>
+<div id="scr-design-preview">
+  <div class="viz-carousel viz-dotted-background" aria-label="Návrhy kompaktního nastavení" data-previous-label="Předchozí" data-next-label="Další">
+    <section class="scr-stage" data-variant="Kompaktní lišta" aria-label="Kompaktní lišta">
+      <div class="scr-window" data-layout="bar" aria-label="SCR Tools s horní lištou"></div>
+      <div class="scr-tray" hidden><span>SCR Tools</span><button type="button" class="cursor-interaction" data-restore><i data-lucide="panel-top-open" aria-hidden="true"></i>Open SCR Tools</button></div>
+    </section>
+    <section class="scr-stage" data-variant="Boční navigace" aria-label="Boční navigace" hidden>
+      <div class="scr-window scr-rail" data-layout="rail" aria-label="SCR Tools s boční navigací"></div>
+      <div class="scr-tray" hidden><span>SCR Tools</span><button type="button" class="cursor-interaction" data-restore><i data-lucide="panel-top-open" aria-hidden="true"></i>Open SCR Tools</button></div>
+    </section>
+  </div>
+  <template id="scr-window-template">
+    <header class="scr-titlebar">
+      <i data-lucide="scan-line" aria-hidden="true"></i><span>SCR Tools</span>
+      <span class="scr-version">0.2.0</span>
+      <button type="button" class="cursor-interaction" aria-label="Minimize to tray" data-tooltip="Minimize to tray" data-hide><i data-lucide="minus" aria-hidden="true"></i></button>
+      <button type="button" class="cursor-interaction" aria-label="Maximize" data-tooltip="Maximize" data-maximize><i data-lucide="square" aria-hidden="true"></i></button>
+      <button type="button" class="cursor-interaction" aria-label="Hide to tray" data-tooltip="Hide to tray" data-hide><i data-lucide="x" aria-hidden="true"></i></button>
+    </header>
+    <div class="scr-layout">
+      <nav class="scr-nav" role="tablist" aria-label="Settings">
+        <button type="button" role="tab" class="cursor-interaction" data-tab="screenshots" aria-selected="true" aria-label="Screenshots" data-tooltip="Screenshots"><i data-lucide="camera" aria-hidden="true"></i><span class="scr-nav-label">Screenshots</span></button>
+        <button type="button" role="tab" class="cursor-interaction" data-tab="general" aria-selected="false" aria-label="General" data-tooltip="General"><i data-lucide="settings-2" aria-hidden="true"></i><span class="scr-nav-label">General</span></button>
+        <button type="button" role="tab" class="cursor-interaction" data-tab="movement" aria-selected="false" aria-label="Mouse Mover" data-tooltip="Mouse Mover" hidden><i data-lucide="mouse-pointer-2" aria-hidden="true"></i><span class="scr-nav-label">Mouse</span></button>
+      </nav>
+      <main class="scr-main">
+        <section data-panel="screenshots" role="tabpanel">
+          <div class="scr-heading"><h2>Screenshots</h2><button type="button" class="scr-help cursor-interaction" data-help aria-label="Screenshot help" aria-expanded="false">?</button></div>
+          <aside class="scr-help-text" hidden>Save PNGs at native resolution. Capture works from this window, the tray or your global shortcut. No save dialog.</aside>
+          <div class="scr-row">
+            <span class="scr-label"><i data-lucide="keyboard" aria-hidden="true"></i>Shortcut</span>
+            <button type="button" class="scr-shortcut cursor-interaction" data-shortcut aria-label="Change screenshot shortcut" data-tooltip="Change screenshot shortcut">Ctrl + Shift + F11</button>
+          </div>
+          <div class="scr-row">
+            <span class="scr-label"><i data-lucide="monitor" aria-hidden="true"></i>Capture</span>
+            <div class="scr-choice" role="group" aria-label="Capture mode">
+              <button type="button" class="cursor-interaction" data-mode="all" aria-pressed="true" aria-label="All monitors combined" data-tooltip="All monitors in one PNG"><i data-lucide="panels-top-left" aria-hidden="true"></i></button>
+              <button type="button" class="cursor-interaction" data-mode="current" aria-pressed="false" aria-label="Current monitor" data-tooltip="Current monitor"><i data-lucide="monitor" aria-hidden="true"></i></button>
+              <button type="button" class="cursor-interaction" data-mode="each" aria-pressed="false" aria-label="Each monitor separately" data-tooltip="One PNG per monitor"><i data-lucide="gallery-horizontal-end" aria-hidden="true"></i></button>
+            </div>
+          </div>
+          <div class="scr-row scr-folder">
+            <div class="scr-path"><i data-lucide="folder" aria-hidden="true"></i><span data-folder>Pictures / SCR Tools</span></div>
+            <button type="button" class="cursor-interaction" data-browse aria-label="Choose screenshot folder" data-tooltip="Choose folder"><i data-lucide="folder-open" aria-hidden="true"></i></button>
+          </div>
+        </section>
+        <section data-panel="general" role="tabpanel" hidden>
+          <div class="scr-heading"><h2>General</h2><button type="button" class="scr-help cursor-interaction" data-help aria-label="General settings help" aria-expanded="false">?</button></div>
+          <aside class="scr-help-text" hidden>Changes take effect after Apply. Close and minimize hide the window; Exit SCR Tools in the tray quits the application.</aside>
+          <label class="scr-row"><span class="scr-label"><i data-lucide="power" aria-hidden="true"></i>Start with Windows</span><input type="checkbox" class="scr-switch cursor-interaction" data-setting="startup" aria-label="Start with Windows"></label>
+          <label class="scr-row"><span class="scr-label"><i data-lucide="panel-top-close" aria-hidden="true"></i>Start in tray</span><input type="checkbox" class="scr-switch cursor-interaction" data-setting="minimized" aria-label="Start in tray"></label>
+          <label class="scr-row"><span class="scr-label"><i data-lucide="languages" aria-hidden="true"></i>Language</span><select aria-label="Interface language"><option>English</option></select></label>
+        </section>
+        <section data-panel="movement" role="tabpanel" hidden>
+          <div class="scr-heading"><h2>Mouse Mover</h2><label class="scr-label"><span class="scr-unit">Enabled</span><input type="checkbox" class="scr-switch cursor-interaction" data-setting="mover" aria-label="Enable Mouse Mover" checked></label></div>
+          <label class="scr-row"><span class="scr-label"><i data-lucide="timer" aria-hidden="true"></i>Idle timeout</span><span class="scr-number"><input type="number" min="10" max="86400" value="100" aria-label="Idle timeout in seconds"><span class="scr-unit">s</span></span></label>
+          <div class="scr-row"><span class="scr-label"><i data-lucide="route" aria-hidden="true"></i>Path</span><div class="scr-choice" role="group" aria-label="Movement pattern"><button type="button" class="cursor-interaction" data-pattern="rectangle" aria-pressed="true" aria-label="Rectangle" data-tooltip="Rectangle"><i data-lucide="rectangle-horizontal" aria-hidden="true"></i></button><button type="button" class="cursor-interaction" data-pattern="circle" aria-pressed="false" aria-label="Circle" data-tooltip="Circle"><i data-lucide="circle" aria-hidden="true"></i></button></div></div>
+          <div class="scr-row"><label class="scr-number">Size<input type="number" min="1" max="1000" value="30" aria-label="Path size in pixels"><span class="scr-unit">px</span></label><label class="scr-number">Duration<input type="number" min="0.2" max="10" step="0.1" value="1" aria-label="Cycle duration in seconds"><span class="scr-unit">s</span></label></div>
+          <hr class="scr-divider">
+          <label class="scr-row"><span class="scr-label"><i data-lucide="moon" aria-hidden="true"></i>Prevent sleep</span><input type="checkbox" class="scr-switch cursor-interaction" data-setting="sleep" aria-label="Prevent system sleep" checked></label>
+          <label class="scr-row"><span class="scr-label"><i data-lucide="sun" aria-hidden="true"></i>Keep displays awake</span><input type="checkbox" class="scr-switch cursor-interaction" data-setting="display" aria-label="Keep displays awake"></label>
+          <div class="scr-row"><button type="button" class="cursor-interaction" data-test><i data-lucide="play" aria-hidden="true"></i>Test</button><span class="scr-movement-result" data-movement-result aria-live="polite">Last movement: not yet</span></div>
+        </section>
+        <hr class="scr-divider">
+        <footer class="scr-actions">
+          <button type="button" class="scr-capture cursor-interaction" data-capture><i data-lucide="camera" aria-hidden="true"></i>Capture</button>
+          <span class="scr-save" data-save-state>Saved</span>
+          <button type="button" class="scr-apply cursor-interaction" data-apply aria-label="Apply settings" data-tooltip="Apply settings"><i data-lucide="check" aria-hidden="true"></i>Apply</button>
+        </footer>
+        <div class="scr-status" data-status aria-live="polite">Ready</div>
+      </main>
+    </div>
+  </template>
+</div>
+<script>
+(() => {
+  const root = document.getElementById('scr-design-preview');
+  const template = document.getElementById('scr-window-template');
+  const demos = [];
+  const restored = window.openai?.widgetState?.modelContent?.settings || {};
+
+  /** Return the chosen tab and its associated panel without changing values. */
+  function selectTab(demo, name) {
+    demo.shell.querySelectorAll('[data-tab]').forEach(button => {
+      button.setAttribute('aria-selected', String(button.dataset.tab === name));
+    });
+    demo.shell.querySelectorAll('[data-panel]').forEach(panel => {
+      panel.hidden = panel.dataset.panel !== name;
+    });
+  }
+
+  /** Save only synthetic preview choices, without persisting reveal state. */
+  function remember() {
+    const settings = {};
+    demos.forEach(demo => {
+      settings[demo.name] = { mode: demo.mode, startup: demo.shell.querySelector('[data-setting="startup"]').checked, minimized: demo.shell.querySelector('[data-setting="minimized"]').checked };
+    });
+    window.openai?.setWidgetState?.({ modelContent: { settings }, privateContent: null }).catch(() => {});
+  }
+
+  /** Apply a compatible saved choice while retaining current transient state. */
+  function applySaved(demo, saved) {
+    if (!saved || typeof saved !== 'object') return;
+    if (['all', 'current', 'each'].includes(saved.mode)) {
+      demo.mode = saved.mode;
+      demo.shell.querySelectorAll('[data-mode]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.mode === demo.mode)));
+    }
+    for (const key of ['startup', 'minimized']) {
+      if (typeof saved[key] === 'boolean') demo.shell.querySelector(`[data-setting="${key}"]`).checked = saved[key];
+    }
+  }
+
+  root.querySelectorAll('.scr-window').forEach(shell => {
+    shell.append(template.content.cloneNode(true));
+    const name = shell.dataset.layout;
+    const stage = shell.parentElement;
+    const demo = { shell, stage, name, mode: 'all', revealed: false };
+    demos.push(demo);
+    shell.querySelectorAll('[data-tab]').forEach(button => {
+      button.id = `scr-${name}-tab-${button.dataset.tab}`;
+      button.setAttribute('aria-controls', `scr-${name}-panel-${button.dataset.tab}`);
+    });
+    shell.querySelectorAll('[data-panel]').forEach(panel => {
+      panel.id = `scr-${name}-panel-${panel.dataset.panel}`;
+      panel.setAttribute('aria-labelledby', `scr-${name}-tab-${panel.dataset.panel}`);
+    });
+    shell.querySelectorAll('[data-help]').forEach((button, index) => {
+      const note = button.parentElement.nextElementSibling;
+      note.id = `scr-${name}-help-${index}`;
+      button.setAttribute('aria-controls', note.id);
+    });
+    applySaved(demo, restored[name]);
+
+    /** Report a pending form edit without saving preferences. */
+    function markChanged() {
+      shell.querySelector('[data-save-state]').textContent = 'Unsaved';
+      shell.querySelector('[data-status]').textContent = 'Ready';
+      remember();
+    }
+
+    /** Conceal movement on every simulated minimize or close action. */
+    function hideWindow() {
+      demo.revealed = false;
+      shell.querySelector('[data-tab="movement"]').hidden = true;
+      selectTab(demo, 'screenshots');
+      shell.hidden = true;
+      stage.querySelector('.scr-tray').hidden = false;
+      stage.querySelector('[data-restore]').focus();
+    }
+
+    shell.addEventListener('click', event => {
+      const button = event.target.closest('button');
+      if (!button || !shell.contains(button)) return;
+      if (button.hasAttribute('data-tab')) selectTab(demo, button.dataset.tab);
+      if (button.hasAttribute('data-mode')) {
+        demo.mode = button.dataset.mode;
+        shell.querySelectorAll('[data-mode]').forEach(choice => choice.setAttribute('aria-pressed', String(choice === button)));
+        markChanged();
+      }
+      if (button.hasAttribute('data-pattern')) {
+        shell.querySelectorAll('[data-pattern]').forEach(choice => choice.setAttribute('aria-pressed', String(choice === button)));
+        markChanged();
+      }
+      if (button.hasAttribute('data-shortcut')) {
+        button.textContent = button.textContent.includes('F11') ? 'Ctrl + Shift + F10' : 'Ctrl + Shift + F11';
+        markChanged();
+      }
+      if (button.hasAttribute('data-browse')) {
+        const folder = shell.querySelector('[data-folder]');
+        folder.textContent = folder.textContent.startsWith('Pictures') ? 'Custom / Captures' : 'Pictures / SCR Tools';
+        markChanged();
+      }
+      if (button.hasAttribute('data-help')) {
+        const note = document.getElementById(button.getAttribute('aria-controls'));
+        note.hidden = !note.hidden;
+        button.setAttribute('aria-expanded', String(!note.hidden));
+      }
+      if (button.hasAttribute('data-hide')) hideWindow();
+      if (button.hasAttribute('data-maximize')) shell.classList.toggle('scr-expanded');
+      if (button.hasAttribute('data-apply')) {
+        shell.querySelector('[data-save-state]').textContent = 'Saved';
+        shell.querySelector('[data-status]').textContent = 'Settings applied';
+        remember();
+      }
+      if (button.hasAttribute('data-capture')) shell.querySelector('[data-status]').textContent = 'Preview · SCRTools_example.png';
+      if (button.hasAttribute('data-test')) shell.querySelector('[data-movement-result]').textContent = 'Preview cycle completed';
+    });
+    shell.addEventListener('change', event => {
+      if (event.target.matches('[data-setting="sleep"]')) {
+        shell.querySelector('[data-setting="display"]').disabled = !event.target.checked;
+      }
+      markChanged();
+    });
+    shell.addEventListener('keydown', event => {
+      if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        event.stopPropagation();
+        demo.revealed = true;
+        shell.querySelector('[data-tab="movement"]').hidden = false;
+        selectTab(demo, 'movement');
+      }
+      if (event.key === 'Escape') {
+        shell.querySelectorAll('[data-help]').forEach(button => button.setAttribute('aria-expanded', 'false'));
+        shell.querySelectorAll('.scr-help-text').forEach(note => { note.hidden = true; });
+      }
+      if (event.altKey && event.key === 'F4') { event.preventDefault(); hideWindow(); }
+    });
+    stage.querySelector('[data-restore]').addEventListener('click', () => {
+      stage.querySelector('.scr-tray').hidden = true;
+      shell.hidden = false;
+      shell.querySelector('[data-tab="screenshots"]').focus();
+    });
+    const appearance = { radius: 8, spacing: 12, labels: false };
+    /** Reflect optional host design controls without replacing the prototype. */
+    function renderAppearance() {
+      shell.style.setProperty('--scr-radius', `${appearance.radius}px`);
+      shell.style.setProperty('--scr-gap', `${appearance.spacing}px`);
+      shell.classList.toggle('scr-labels', appearance.labels);
+    }
+    renderAppearance();
+    if (globalThis.Tweak) {
+      const tweak = new Tweak({ container: shell, onChange: renderAppearance });
+      tweak.addSlider(appearance, 'spacing', { label: 'Rozestupy řádků', min: 6, max: 18, unit: 'px' });
+      tweak.addSlider(appearance, 'radius', { label: 'Zaoblení okna', min: 4, max: 12, unit: 'px' });
+      tweak.addToggle(appearance, 'labels', { label: 'Popisky navigace' });
+    }
+  });
+  document.addEventListener('click', event => {
+    demos.forEach(demo => {
+      demo.shell.querySelectorAll('[data-help]').forEach(button => {
+        const note = document.getElementById(button.getAttribute('aria-controls'));
+        if (!button.contains(event.target) && !note.contains(event.target)) {
+          note.hidden = true;
+          button.setAttribute('aria-expanded', 'false');
+        }
+      });
+    });
+  });
+  window.addEventListener('openai:set_globals', event => {
+    const settings = event.detail?.globals?.widgetState?.modelContent?.settings;
+    if (settings) demos.forEach(demo => applySaved(demo, settings[demo.name]));
+  });
+  if (globalThis.lucide) lucide.createIcons({ attrs: { width: 16, height: 16 } });
+})();
+</script>

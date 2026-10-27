@@ -26,7 +26,6 @@ NIF_SHOWTIP: int = 0x80
 NOTIFYICON_VERSION_4: int = 4
 TRAY_ICON_ID: int = 1
 MENU_OPEN: int = 101
-MENU_TOGGLE: int = 102
 MENU_CAPTURE: int = 103
 MENU_EXIT: int = 104
 
@@ -84,14 +83,11 @@ class TrayIcon:
         self.registered = True
         return True
 
-    def show_menu(self, mover_enabled: bool) -> str | None:
+    def show_menu(self) -> str | None:
         """Display the compact translated menu and return the chosen action.
 
-        Args:
-            mover_enabled: Determines whether the menu says Enable or Pause.
-
         Returns:
-            open, toggle, capture, exit, or None when the menu is dismissed.
+            str | None: open, capture, exit, or None when dismissed.
 
         Raises:
             OSError: Windows cannot create or populate the popup menu.
@@ -102,7 +98,6 @@ class TrayIcon:
         try:
             entries = (
                 (MENU_OPEN, "tray.open"),
-                (MENU_TOGGLE, "tray.pause" if mover_enabled else "tray.enable"),
                 (MENU_CAPTURE, "tray.capture"),
                 (0, ""),
                 (MENU_EXIT, "tray.exit"),
@@ -126,7 +121,7 @@ class TrayIcon:
             # click after SetForegroundWindow has made the menu owner active.
             self._api.user32.PostMessageW(self._window, 0, 0, 0)
             actions: dict[int, str] = {
-                MENU_OPEN: "open", MENU_TOGGLE: "toggle",
+                MENU_OPEN: "open",
                 MENU_CAPTURE: "capture", MENU_EXIT: "exit",
             }
             return actions.get(int(selected))

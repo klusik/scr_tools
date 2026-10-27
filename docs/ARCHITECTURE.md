@@ -29,6 +29,30 @@ Scheduling checks are lightweight and use Tk's `after` mechanism; status
 updates are throttled so the displayed countdown is useful without repainting
 the entire window on each check. No worker calls Tk.
 
+Movement presentation is concealed by default. A window-local Ctrl+Shift+S
+binding reveals the existing mouse page, actions and status on the Tk thread.
+Close, minimize and withdrawal conceal them again. Notebook hiding and grid
+removal retain editor variables and never reconfigure the scheduler, native
+host or power requests. Movement notices have a separate concealed label so
+background completions and failures cannot replace ordinary window notices.
+The tray offers only open, capture and exit. Reveal visibility is transient
+view state and is not a persisted preference or a global hotkey registration.
+
+`gui/compact_style.py` owns main-thread Pillow/Tk images for local line icons
+and switch indicators, scaled from current Tk DPI. Switches and monitor-mode
+choices retain native ttk checkbutton/radiobutton variables, keyboard focus
+and disabled-state behavior. The palette derives from Windows system colors.
+A placed canvas supplies a small rounded settings backdrop without taking
+part in grid size negotiation. The native notebook owns its tab hit testing;
+concealment unmanages the existing mouse page so it cannot inflate ordinary
+settings, while the page and all edited variables remain alive.
+
+`gui/context_help.py` owns translated tooltips and click/keyboard help popups.
+It cancels delayed hints and releases transient windows and root bindings on
+concealment and destruction. Main-window fitting flushes propagated native
+geometry under a re-entry guard, preserving responsive layout and preventing
+an earlier root-size measurement from clipping an expanded page.
+
 A dedicated native thread creates a hidden top-level window and runs the
 Windows message pump. It owns low-level hooks, `RegisterHotKey`, the native
 tray icon, WTS session notifications and `SetThreadExecutionState`. Queued

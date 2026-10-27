@@ -5,12 +5,13 @@ activity, explicit instant screenshots, and configurable sleep prevention.
 It uses Tkinter/ttk, supported Windows APIs through `ctypes`, and Pillow for
 lossless PNG capture.
 
-The initial application version is defined in
+The application version is defined in
 [`src/scr_tools/version.py`](src/scr_tools/version.py). This repository contains
 the complete application source, resources, tests, and Windows build workflow.
 See [`docs/VERIFICATION.md`](docs/VERIFICATION.md) for observed checks and
 remaining Windows validation. Do not interpret source tests on another OS as
 proof that a Windows installer has been built or smoke-tested.
+See [`docs/RELEASE_NOTES.md`](docs/RELEASE_NOTES.md) for changes in 0.2.0.
 
 ## Requirements
 
@@ -49,13 +50,27 @@ installation process. The application does not need an elevated console.
 
 ## Defaults and settings
 
-Settings are editable in the compact Mouse Mover, Screenshots and General
-tabs and persist between launches. Apply validates the complete proposed
-configuration before saving it.
+The window normally shows only Screenshots and General. Press
+**Ctrl+Shift+S** while SCR Tools has focus to reveal the Mouse Mover tab,
+enable/pause control, test action and movement status. This is a local window
+shortcut. Movement controls and diagnostics disappear again on minimize,
+Close, Alt+F4 or hiding to tray; restoring the window starts with them hidden.
+The tray menu does not expose movement actions.
+
+Concealment changes presentation only: applied settings, running movement,
+sleep prevention and pending form edits are preserved. The reveal state is
+not saved. Apply validates the complete proposed configuration before saving.
+
+Settings use a compact icon toolbar. Hover or keyboard-focus controls for
+their captions; the page title identifies the selected tab. The three monitor
+icons select combined, current-monitor or separate-monitor capture. Binary
+preferences use keyboard-operated switches. Press the plain **?** button for
+longer guidance; Escape, an outside click or hiding the window closes it.
+The settings panel has softly rounded corners and quiet system-color surfaces.
 
 | Setting | Default | Accepted behavior |
 | --- | --- | --- |
-| Mouse Mover | Enabled | Pause/enable in the window or tray |
+| Mouse Mover | Enabled | Pause/enable after revealing controls with Ctrl+Shift+S |
 | Idle timeout | 100 seconds | 10 through 86,400 seconds |
 | Path | Rectangle | Rectangle or circle |
 | Distance | 30 pixels | 1 through 1,000 physical pixels |
@@ -184,7 +199,6 @@ Double-click the tray icon or choose **Open SCR Tools** to restore it.
 The tray menu contains:
 
 - Open SCR Tools.
-- Enable/Pause Mouse Mover.
 - Capture screenshot.
 - **Exit SCR Tools**, the sole ordinary application exit command.
 
@@ -283,7 +297,9 @@ interactive Windows 11 test machine.
 
 ## Build and install
 
-Install Inno Setup 6 or 7. Then run:
+Install Inno Setup 6 or 7. If `ISCC` is available on `PATH`, the script uses
+it automatically; no compiler path argument is required. Check discovery
+with `Get-Command ISCC`, then run:
 
 ```powershell
 py -3.14 -m pip install -r requirements-build.txt
@@ -296,7 +312,8 @@ The equivalent explicit dependency-installation opt-in is:
 .\deploy.ps1 -InstallDependencies
 ```
 
-For an Inno installation outside standard paths:
+If `ISCC` is absent from `PATH`, the script also searches standard install
+folders and registered installations. An explicit path is an optional override:
 
 ```powershell
 .\deploy.ps1 -InnoCompiler "D:\Tools\Inno Setup 7\ISCC.exe"

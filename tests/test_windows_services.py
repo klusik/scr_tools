@@ -36,6 +36,7 @@ from scr_tools.windows.session_monitor import (
     WTS_SESSION_UNLOCK, session_connected,
 )
 from scr_tools.windows.single_instance import SingleInstance
+from scr_tools.windows.tray_icon import TrayIcon
 
 
 class AbsoluteMouseCoordinateTests(unittest.TestCase):
@@ -395,6 +396,49 @@ class NativeHostLifecycleTests(unittest.TestCase):
         self.assertFalse(self.host.hooks_ready())
         self.assertFalse(self.host.interactive())
         self.assertFalse(self.host.tray_ready())
+
+
+class TrayMenuTests(unittest.TestCase):
+    """Verify screenshot-only tray actions and popup resource cleanup."""
+
+    def setUp(self) -> None:
+        """Substitute Win32 calls while retaining the real menu implementation."""
+        self.api: Mock = Mock()
+        self.api.user32.LoadImageW.return_value = 5
+        self.api.user32.CreatePopupMenu.return_value = 6
+        self.api.user32.AppendMenuW.return_value = 1
+        self.api.user32.GetCursorPos.return_value = 1
+        self.tray: TrayIcon = TrayIcon(
+            cast(WindowsAPI, self.api), 1, Path("icon.ico"), lambda key: key
+        )
+        self.addCleanup(self.tray.close)
+
+    def test_menu_has_only_open_capture_and_exit_actions(self) -> None:
+        """No normal tray item advertises or toggles mouse movement."""
+        self.api.user32.TrackPopupMenu.return_value = 103
+        self.assertEqual(self.tray.show_menu(), "capture")
+        self.assertEqual(
+            [entry.args[3] for entry in
+             self.api.user32.AppendMenuW.call_args_list],
+            ["tray.open", "tray.capture", None, "tray.exit"],
+        )
+        self.api.user32.DestroyMenu.assert_called_once_with(6)
+
+    def test_open_exit_dismissal_and_stale_toggle_identifier(self) -> None:
+        """Restore and exit survive removal of the former movement item."""
+        for selected, expected in ((101, "open"), (104, "exit"),
+                                   (0, None), (102, None)):
+            with self.subTest(selected=selected):
+                self.api.user32.TrackPopupMenu.return_value = selected
+                self.assertEqual(self.tray.show_menu(), expected)
+        self.assertEqual(self.api.user32.DestroyMenu.call_count, 4)
+
+    def test_failed_menu_population_still_releases_popup(self) -> None:
+        """A native failure cannot leak a partially constructed menu."""
+        self.api.user32.AppendMenuW.return_value = 0
+        with self.assertRaises(OSError):
+            self.tray.show_menu()
+        self.api.user32.DestroyMenu.assert_called_once_with(6)
 
 
 class SingleInstanceTests(unittest.TestCase):
