@@ -53,7 +53,10 @@ class IdleSchedulerTests(unittest.TestCase):
 
     def test_external_input_resets_and_cancels(self) -> None:
         """Keyboard/mouse occurrences and foreign injections are all activity."""
-        for extra_info, injected in ((0, False), (987, True), (123456, False)):
+        for extra_info, injected in (
+            (0, False), (987, True), (123456, False),
+            ((1 << 32) | 123456, True),
+        ):
             self.activity.arm()
             self.clock.now += 90.0
             self.activity.record_input(extra_info, injected)

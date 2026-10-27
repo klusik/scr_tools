@@ -17,6 +17,13 @@ are handled by re-registering the icon.
 
 ## The timer keeps resetting or movement does not start
 
+If a 10-second countdown reaches 9/10, immediately restarts at 0/10 and
+**Last movement** stays **Never**, update to the corrected source/build and
+restart SCR Tools. The original 64-bit event marker could lose its upper
+32 bits in the Windows mouse hook, making the first automated frame cancel
+its own cycle. The corrected code uses one nonzero 32-bit marker throughout
+injection and activity tracking; it still cancels on external input.
+
 Any mouse or keyboard input in the interactive session resets the countdown.
 This includes other applications, accessibility tools, remote input and
 software-generated input that does not carry this SCR Tools process's own

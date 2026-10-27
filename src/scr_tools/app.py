@@ -47,6 +47,7 @@ from scr_tools.windows.known_folders import (
     get_pictures_folder,
 )
 from scr_tools.windows.mouse_injector import (
+    MAX_INPUT_MARKER,
     MouseInjector,
     set_process_dpi_awareness,
 )
@@ -58,7 +59,6 @@ from scr_tools.windows.startup_registration import StartupRegistration
 POLL_INTERVAL_MILLISECONDS: int = 100
 MAX_EVENTS_PER_POLL: int = 100
 TEST_SETTLE_MILLISECONDS: int = 350
-INPUT_MARKER_PREFIX: int = 0x5343525400000000
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
@@ -215,7 +215,10 @@ class Application:
         self._initial_notices: list[str] = initial_notices
         self._events: queue.Queue[AppEvent] = queue.Queue()
         self._stopping: threading.Event = threading.Event()
-        self._marker: int = INPUT_MARKER_PREFIX | secrets.randbits(32)
+        # Use the same nonzero DWORD throughout injection and classification.
+        # A 64-bit prefix can disappear on the round trip through Windows and
+        # make the first frame cancel its own movement as external activity.
+        self._marker: int = secrets.randbelow(MAX_INPUT_MARKER) + 1
         self._activity: ActivityTracker = ActivityTracker(self._marker)
         self._scheduler: IdleScheduler = IdleScheduler(
             self._activity, settings.idle_seconds

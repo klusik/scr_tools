@@ -64,6 +64,13 @@ control input, resets the internal timer. Completion of a movement creates
 an explicit new scheduling baseline; self-generated hook traffic does not
 advance that baseline accidentally.
 
+The process chooses a random nonzero unsigned 32-bit marker. Both ctypes
+`dwExtraInfo` fields remain pointer-sized as required by the Windows x64 ABI,
+but live Windows 11 testing showed that the mouse hook can receive only the
+low 32 bits of an injected value. The injector rejects wider identifiers.
+Using the same bounded value end to end avoids self-cancellation without
+masking foreign markers or excluding other software's injected input.
+
 Coordinates are physical integer pixels. Monitor rectangles use inclusive
 left/top and exclusive right/bottom bounds. Paths remain inside the monitor
 containing the start point, and negative origins are valid. The injector maps

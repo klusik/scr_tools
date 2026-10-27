@@ -20,7 +20,7 @@ from unittest.mock import Mock, patch
 from scr_tools.events import AppEvent
 from scr_tools.windows.global_hotkey import GlobalHotkey, MOD_NOREPEAT
 from scr_tools.windows.input_monitor import InputMonitor
-from scr_tools.windows.mouse_injector import normalize_coordinate
+from scr_tools.windows.mouse_injector import MouseInjector, normalize_coordinate
 from scr_tools.windows.native_api import (
     DWORD, INPUT, KBDLLHOOKSTRUCT, MSLLHOOKSTRUCT, MUTEX_NAME, WM_TRAY, WindowsAPI,
 )
@@ -65,6 +65,21 @@ class AbsoluteMouseCoordinateTests(unittest.TestCase):
         packet = INPUT()
         packet.mi.dwExtraInfo = 0x53435254FFFFFFFF
         self.assertEqual(packet.mi.dwExtraInfo, 0x53435254FFFFFFFF)
+
+    def test_injector_rejects_markers_that_cannot_round_trip(self) -> None:
+        """Zero and markers wider than a DWORD cannot identify our own input."""
+        with patch("scr_tools.windows.mouse_injector.WindowsAPI") as api_factory:
+            for marker in (0, -1, 0x100000000, 0x53435254FFFFFFFF):
+                with self.subTest(marker=marker), self.assertRaises(ValueError):
+                    MouseInjector(marker)
+        api_factory.assert_not_called()
+
+    def test_injector_accepts_full_nonzero_dword_range(self) -> None:
+        """High-bit DWORD markers remain unsigned in the pointer-sized ABI."""
+        with patch("scr_tools.windows.mouse_injector.WindowsAPI"):
+            for marker in (1, 0x80000000, 0xFFFFFFFF):
+                with self.subTest(marker=marker):
+                    self.assertEqual(MouseInjector(marker).marker, marker)
 
 
 class PowerPreventionTests(unittest.TestCase):

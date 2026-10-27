@@ -9,6 +9,7 @@
 
 """Main-thread lifecycle tests; these do not claim real Windows GUI coverage."""
 
+import ctypes
 from dataclasses import replace
 from pathlib import Path
 import tempfile
@@ -18,12 +19,15 @@ from unittest.mock import MagicMock, call, patch
 
 from scr_tools.app import Application, GuardedDesktop
 from scr_tools.configuration import ConfigurationStore, Settings
+from scr_tools.core.idle_scheduler import ActivitySnapshot
 from scr_tools.core.movement_controller import MovementController
 from scr_tools.core.screenshot_service import ScreenshotService
 from scr_tools.events import AppEvent
 from scr_tools.gui.main_window import MainWindow, WindowActions
 from scr_tools.localization.translator import Translator
+from scr_tools.windows.input_monitor import InputMonitor, LLMHF_INJECTED
 from scr_tools.windows.mouse_injector import MouseInjector
+from scr_tools.windows.native_api import DWORD, INPUT, MSLLHOOKSTRUCT
 from scr_tools.windows.native_host import NativeHost
 from scr_tools.windows.startup_registration import StartupRegistration
 
@@ -149,6 +153,53 @@ class ApplicationLifecycleTests(unittest.TestCase):
         generation: int = self.application._activity.snapshot().generation
         self.application._perform_test(paused, generation)
         self.movement.start_cycle.assert_called_once_with(paused)
+
+    def test_own_mouse_input_survives_hook_extra_info_round_trip(self) -> None:
+        """A 32-bit hook payload must not turn our movement into cancellation."""
+        with patch("scr_tools.windows.mouse_injector.WindowsAPI") as api_factory:
+            injector: MouseInjector = MouseInjector(self.application._marker)
+        api: MagicMock = api_factory.return_value
+        api.user32.GetSystemMetrics.side_effect = (
+            lambda index: {76: 0, 77: 0, 78: 1920, 79: 1080}[index]
+        )
+        api.user32.CallNextHookEx.return_value = 0
+        monitor: InputMonitor = InputMonitor(
+            injector.api, self.application._activity.record_input
+        )
+
+        def deliver_input(count: int, packets: object, size: int) -> int:
+            """Loop SendInput back through the observed Windows hook boundary.
+
+            Args:
+                count: Number of INPUT records, expected to be one.
+                packets: Borrowed ctypes byref object for the INPUT record.
+                size: Native INPUT structure size in bytes.
+
+            Returns:
+                One accepted event after delivering only its input metadata.
+            """
+            self.assertEqual(count, 1)
+            self.assertEqual(size, ctypes.sizeof(INPUT))
+            packet: INPUT = ctypes.cast(packets, ctypes.POINTER(INPUT)).contents
+            hook: MSLLHOOKSTRUCT = MSLLHOOKSTRUCT()
+            # Windows 11 can retain only the low DWORD of dwExtraInfo even
+            # though both ABI fields must remain pointer-sized on x64.
+            hook.dwExtraInfo = DWORD(packet.mi.dwExtraInfo).value
+            hook.flags = LLMHF_INJECTED
+            monitor._mouse_event(0, 0x0200, ctypes.addressof(hook))
+            return 1
+
+        api.user32.SendInput.side_effect = deliver_input
+        before: ActivitySnapshot | None = self.application._activity.arm()
+        with (
+            patch.object(injector, "accessible_desktop", return_value=True),
+            patch.object(injector, "buttons_pressed", return_value=False),
+        ):
+            injector.move_to((100, 100))
+        self.assertEqual(self.application._activity.snapshot(), before)
+        self.assertFalse(self.application._activity.cancel_event.is_set())
+        self.assertFalse(monitor.callback_failed)
+        api.user32.CallNextHookEx.assert_called_once()
 
     def test_exit_event_releases_all_services_and_destroys_tk(self) -> None:
         """A tray/OS exit waits for resource owners before destroying Tk."""

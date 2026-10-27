@@ -22,6 +22,11 @@ MOUSEEVENTF_MOVE_NOCOALESCE: int = 0x2000
 MOUSEEVENTF_VIRTUALDESK: int = 0x4000
 MOUSEEVENTF_ABSOLUTE: int = 0x8000
 ABSOLUTE_RANGE: int = 65536
+# Windows 11 can return only the low DWORD of SendInput's dwExtraInfo to
+# WH_MOUSE_LL, despite the pointer-sized ABI. Keep identifiers in that range
+# and compare them exactly; masking incoming foreign markers would ignore
+# unrelated injected events that happen to share the same low DWORD.
+MAX_INPUT_MARKER: int = 0xFFFFFFFF
 DESKTOP_READOBJECTS: int = 0x0001
 UOI_NAME: int = 2
 MOUSE_BUTTON_KEYS: tuple[int, ...] = (0x01, 0x02, 0x04, 0x05, 0x06)
@@ -109,14 +114,15 @@ class MouseInjector:
         """Create a native input adapter.
 
         Args:
-            marker: Process-specific unsigned pointer-sized event marker.
+            marker: Process-specific nonzero unsigned 32-bit event marker,
+                stored in the pointer-sized dwExtraInfo field without loss.
 
         Raises:
-            ValueError: The marker is outside the x64 unsigned range.
+            ValueError: The marker is outside the nonzero unsigned 32-bit range.
             OSError: The process is not running on 64-bit Windows.
         """
-        if not 0 < marker < 2 ** 64:
-            raise ValueError("Mouse event marker must be a nonzero uint64")
+        if not 0 < marker <= MAX_INPUT_MARKER:
+            raise ValueError("Mouse event marker must be a nonzero uint32")
         self.marker: int = marker
         self.api: WindowsAPI = WindowsAPI()
 

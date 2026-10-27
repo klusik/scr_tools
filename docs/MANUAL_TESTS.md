@@ -21,6 +21,11 @@ toolchain versions and observed result for each exercised item.
    input. If using a diagnostic hook, inspect only event metadata, not text.
 5. Use a separate accessibility or test input tool. Its injected events must
    count as external activity rather than being excluded globally.
+6. Apply a 10-second timeout and leave input untouched. The elapsed display
+   may show 9/10 immediately before the cycle, but the pointer must traverse
+   the selected path and **Last movement** must change from **Never**. Verify
+   a second complete cycle after another idle interval. A timer reset alone
+   is not evidence of successful movement.
 
 ## Movement and cancellation
 
