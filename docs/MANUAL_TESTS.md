@@ -115,7 +115,9 @@ toolchain versions and observed result for each exercised item.
    Disable it and confirm removal of the current user's Run value.
 5. Run `deploy.ps1` with installed system Python and both supported Inno major
    versions where available. Confirm no venv, correct output names, cleanup,
-   meaningful failure exits and retained diagnostic logs.
+   meaningful failure exits and retained diagnostic logs. Check automatic
+   `ISCC` selection from `PATH`, including a compiler without PE version
+   metadata, fallback discovery and an invalid explicit compiler override.
 6. On a clean Windows 11 machine **without Python installed**, install as a
    normal user, launch through Start Menu, and repeat core smoke checks.
    Confirm application/window/tray/taskbar/EXE icons and Tcl/Tk resources.

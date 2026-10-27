@@ -283,7 +283,9 @@ interactive Windows 11 test machine.
 
 ## Build and install
 
-Install Inno Setup 6 or 7. Then run:
+Install Inno Setup 6 or 7. If `ISCC` is available on `PATH`, the script uses
+it automatically; no compiler path argument is required. Check discovery
+with `Get-Command ISCC`, then run:
 
 ```powershell
 py -3.14 -m pip install -r requirements-build.txt
@@ -296,7 +298,8 @@ The equivalent explicit dependency-installation opt-in is:
 .\deploy.ps1 -InstallDependencies
 ```
 
-For an Inno installation outside standard paths:
+If `ISCC` is absent from `PATH`, the script also searches standard install
+folders and registered installations. An explicit path is an optional override:
 
 ```powershell
 .\deploy.ps1 -InnoCompiler "D:\Tools\Inno Setup 7\ISCC.exe"

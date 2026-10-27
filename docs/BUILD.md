@@ -49,13 +49,27 @@ Or explicitly permit the script to perform the dependency installation:
 .\deploy.ps1 -InstallDependencies
 ```
 
-Inno compiler discovery checks an explicit `-InnoCompiler` argument, `PATH`,
-standard program directories and known per-user/per-machine uninstall
-registry locations. Its file version must report major version 6 or 7:
+The default command is `ISCC` from `PATH`, including native wrappers resolved
+through `PATHEXT`. No `-InnoCompiler` argument is required. Confirm which
+command your console sees with:
+
+```powershell
+Get-Command ISCC -CommandType Application
+```
+
+If it is not available there, discovery also checks standard program folders
+and known per-user/per-machine uninstall registry locations. After changing
+`PATH`, open a new PowerShell console. An explicit compiler path remains an
+optional override and takes precedence over automatic discovery:
 
 ```powershell
 .\deploy.ps1 -InnoCompiler "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 ```
+
+Discovery verifies Inno Setup 6 or 7 using the compiler's `/?` banner, not
+Windows file-version metadata, which may be absent or `0.0.0.0`. Inno 6's
+help command can return exit code 1; the subsequent actual compilation still
+requires exit code 0 and the expected installer output.
 
 If local PowerShell policy blocks the script, follow your organization's
 approved script-execution process. The build does not modify that policy.
@@ -66,7 +80,8 @@ approved script-execution process. The build does not modify that policy.
    Windows build 22000 or newer, standard GIL-enabled build, and
    `sys.prefix == sys.base_prefix`. Explicit checks remain active when Python
    optimization is enabled.
-2. Resolve an installed Inno Setup 6/7 compiler before expensive work.
+2. Resolve `ISCC` from `PATH` first, falling back to installed Inno Setup 6/7,
+   and verify its compiler banner before expensive work.
 3. Create a unique child directory beneath `.build/` and retain separate
    diagnostic logs in `release/buildlogs/<invocation>/`.
 4. Optionally install requirements when explicitly requested. Otherwise,
@@ -106,7 +121,10 @@ a persistent service or require a system Python installation on the target.
 The manifest requests `asInvoker`, disables UIAccess, and declares
 `PerMonitorV2` with an older per-monitor fallback. Its release version is
 generated from `version.py`; the maintained manifest's assembly version is a
-template value only. GUI font scaling, native coordinates and mixed-DPI
+template value only. Generation preserves unprefixed XML elements and scoped
+default namespaces: PyInstaller's manifest processor requires the literal
+`assembly` name and looks up security elements by their unprefixed names.
+GUI font scaling, native coordinates and mixed-DPI
 capture still require the Windows acceptance pass.
 
 The build is unsigned. Signing and publishing are separate operations and

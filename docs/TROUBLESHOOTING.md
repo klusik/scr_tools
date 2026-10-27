@@ -151,6 +151,19 @@ baseline and Inno Setup 6 or 7. It exits on a failing native command and keeps
 diagnostics under `release/buildlogs/`. No final-success message is emitted
 if the build or owned-stage cleanup fails.
 
+No compiler path option is normally needed. Run `Get-Command ISCC` in the
+same console to check `PATH`. Add the Inno compiler folder to `PATH` and
+open a new console if necessary; standard/registered installations are
+also searched automatically. Compiler version checking uses its `/?`
+banner, so missing or zero Windows file-version metadata is supported.
+
+An `AssertionError` at PyInstaller's `root_element.tagName == "assembly"`
+indicates an incompatible generated manifest. The original metadata writer
+serialized it as `ns0:assembly` and prefixed security elements as well. Use
+the corrected `scripts/release_metadata.py`, which preserves the template's
+scoped namespaces and unprefixed names, then rerun the normal build. Changing
+Pillow or Inno Setup does not repair that XML serialization defect.
+
 The installer asks for a running instance to close. Choose **Exit SCR Tools**
 in the tray, then retry. Clicking the main window's X only hides it. Do not
 expect silent forced termination, elevated installation, or deletion of

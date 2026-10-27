@@ -12,7 +12,7 @@
 import argparse
 import ast
 import re
-import xml.etree.ElementTree as ElementTree
+import xml.dom.minidom as minidom
 from pathlib import Path
 
 
@@ -82,18 +82,27 @@ def write_metadata(stage: Path, version: str) -> None:
     VarFileInfo([VarStruct('Translation', [1033, 1200])])])
 '''
     (stage / "version_info.txt").write_text(resource, encoding="utf-8")
-    manifest: ElementTree.ElementTree = ElementTree.parse(
-        ROOT / "assets/SCRTools.manifest"
-    )
-    identity: ElementTree.Element | None = manifest.find(
-        f"{{{ASSEMBLY_NAMESPACE}}}assemblyIdentity"
-    )
-    if identity is None:
-        raise ValueError("The executable manifest lacks assemblyIdentity.")
-    identity.set("version", ".".join(str(part) for part in file_version))
-    manifest.write(
-        stage / "SCRTools.manifest", encoding="utf-8", xml_declaration=True
-    )
+    # Preserve each scoped default namespace and the unprefixed element names.
+    # ElementTree serialization adds ns0:/ns1: prefixes, while PyInstaller's
+    # manifest processor looks up literal names such as assembly and trustInfo.
+    # Merely registering the root namespace would still prefix security nodes
+    # and could cause duplicate execution-level policy to be inserted later.
+    with minidom.parse(str(ROOT / "assets/SCRTools.manifest")) as manifest:
+        identity: minidom.Element | None = next(
+            (node for node in manifest.documentElement.childNodes
+             if isinstance(node, minidom.Element)
+             and node.namespaceURI == ASSEMBLY_NAMESPACE
+             and node.localName == "assemblyIdentity"),
+            None,
+        )
+        if identity is None:
+            raise ValueError("The executable manifest lacks assemblyIdentity.")
+        identity.setAttribute(
+            "version", ".".join(str(part) for part in file_version)
+        )
+        (stage / "SCRTools.manifest").write_bytes(
+            manifest.toxml(encoding="utf-8", standalone=True)
+        )
 
 
 def main() -> None:
