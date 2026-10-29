@@ -19,6 +19,13 @@ from pathlib import Path
 from scr_tools.localization.translator import Translator
 
 
+PUBLIC_COPY_PATTERN: re.Pattern[str] = re.compile(
+    r"\b(?:movement|mover|moving|jiggl\w*)\b|"
+    r"\bmouse\s+mov\w*\b|\bCtrl\s*\+\s*Shift\s*\+\s*S\b",
+    re.IGNORECASE,
+)
+
+
 class LocalizationTests(unittest.TestCase):
     """Check safe rendering when optional translations are absent or damaged."""
 
@@ -61,6 +68,28 @@ class LocalizationTests(unittest.TestCase):
             Translator("sv").text("movement.completed"),
             Translator("en").text("movement.completed"),
         )
+
+    def test_catalog_copy_uses_public_product_vocabulary(self) -> None:
+        """Captions, hints and failures follow the same public copy contract."""
+        directory: Path = (
+            Path(__file__).resolve().parents[1]
+            / "src" / "scr_tools" / "localization"
+        )
+        for path in sorted(directory.glob("*.json")):
+            catalog: dict[str, str] = json.loads(path.read_text("utf-8"))
+            for key, message in catalog.items():
+                with self.subTest(catalog=path.name, key=key):
+                    self.assertNotRegex(message, PUBLIC_COPY_PATTERN)
+
+    def test_distribution_documents_follow_public_copy_contract(self) -> None:
+        """Readme, contributor notes and shipped previews use approved copy."""
+        root: Path = Path(__file__).resolve().parents[1]
+        paths: list[Path] = [root / "README.md", root / "AGENTS.md"]
+        paths.extend(sorted((root / "docs").rglob("*.md")))
+        paths.extend(sorted((root / "docs").rglob("*.html")))
+        for path in paths:
+            with self.subTest(document=path.relative_to(root).as_posix()):
+                self.assertNotRegex(path.read_text("utf-8"), PUBLIC_COPY_PATTERN)
 
     def test_partial_and_malformed_locale_fallback(self) -> None:
         """Broken optional entries fall back independently to their English text."""

@@ -2,7 +2,7 @@
 # Repository: SCR-Tools (local Git-ready source)
 # File path: tests/test_gui_visibility.py
 # Module Type: Tk presentation contract tests
-# Purpose: Verify temporary movement visibility with real Tk widgets.
+# Purpose: Verify transient controls and retained edits with real Tk widgets.
 # Responsibilities: Exercise keyboard reveal, concealment and retained edits.
 # Author: Rudolf Klusal
 # License: MIT
@@ -73,10 +73,10 @@ class MovementVisibilityTests(unittest.TestCase):
         self.root.update()
         self.root.event_generate("<Control-Shift-KeyPress-S>")
         self.root.update()
-        self.assertIn("Mouse Mover", self._visible_tabs())
+        self.assertIn("Advanced", self._visible_tabs())
 
     def test_default_window_exposes_only_screenshots_and_general(self) -> None:
-        """First launch hides every movement control and selects Screenshots."""
+        """First launch selects Screenshots and exposes its ordinary actions."""
         self.assertEqual(self._visible_tabs(), ["Screenshots", "General"])
         notebook: ttk.Notebook = self.view.settings_view.notebook
         self.assertEqual(notebook.tab(notebook.select(), "text"), "Screenshots")
@@ -105,7 +105,7 @@ class MovementVisibilityTests(unittest.TestCase):
                          "<Control-Shift-KeyPress-s>"):
             entry.event_generate(sequence)
             self.root.update()
-            self.assertIn("Mouse Mover", self._visible_tabs())
+            self.assertIn("Advanced", self._visible_tabs())
         self.assertEqual(entry.get(), before)
         self.assertEqual(editor.notebook.select(), str(editor._mouse_page))
         self.assertTrue(all(widget.winfo_ismapped()
@@ -120,10 +120,10 @@ class MovementVisibilityTests(unittest.TestCase):
         editor = self.view.settings_view
         editor._idle.set("321")
         editor._hotkey.set("Ctrl+Shift+F10")
-        self.view.set_status("Moving", "Movement detail", False)
-        self.view.set_last_movement("Last movement: 12:34:56")
+        self.view.set_status("Processing", "Operation detail", False)
+        self.view.set_last_movement("Last completed: 12:34:56")
         self.view.set_notice("Ordinary notice")
-        self.view.set_movement_notice("Movement completed")
+        self.view.set_movement_notice("Operation completed")
         self.view.set_capture_status("Screenshot result")
         self.view.hide()
         self.root.update()
@@ -139,7 +139,7 @@ class MovementVisibilityTests(unittest.TestCase):
         self.assertEqual(self.view._capture_status.get(), "Screenshot result")
         self._reveal()
         self.assertEqual(editor._idle.get(), "321")
-        self.assertEqual(self.view._movement_notice.get(), "Movement completed")
+        self.assertEqual(self.view._movement_notice.get(), "Operation completed")
         self.action.assert_not_called()
 
     def test_close_attempt_conceals_even_if_tray_hiding_is_declined(self) -> None:

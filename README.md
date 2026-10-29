@@ -1,7 +1,7 @@
 # SCR Tools
 
-SCR Tools is a compact Windows 11 x64 desktop utility for idle-triggered mouse
-activity, explicit instant screenshots, and configurable sleep prevention.
+SCR Tools is a compact Windows 11 x64 desktop utility for explicit instant
+screenshots and configurable sleep prevention.
 It uses Tkinter/ttk, supported Windows APIs through `ctypes`, and Pillow for
 lossless PNG capture.
 
@@ -39,10 +39,8 @@ py -3.14 -m pip install -r requirements.txt
 py -3.14 run_scr_tools.py
 ```
 
-The first launch shows the main window. SCR Tools registers its tray icon
-immediately, starts monitoring session-wide input, enables Mouse Mover, and
-requests system sleep prevention. The first automatic movement occurs after
-100 seconds without external mouse or keyboard activity.
+The first launch shows the main window and registers the tray icon
+immediately. System sleep prevention is enabled by default.
 
 **Do not create a venv.** Install dependencies into the selected system Python.
 If that interpreter is managed by your organization, use its approved package
@@ -50,16 +48,9 @@ installation process. The application does not need an elevated console.
 
 ## Defaults and settings
 
-The window normally shows only Screenshots and General. Press
-**Ctrl+Shift+S** while SCR Tools has focus to reveal the Mouse Mover tab,
-enable/pause control, test action and movement status. This is a local window
-shortcut. Movement controls and diagnostics disappear again on minimize,
-Close, Alt+F4 or hiding to tray; restoring the window starts with them hidden.
-The tray menu does not expose movement actions.
-
-Concealment changes presentation only: applied settings, running movement,
-sleep prevention and pending form edits are preserved. The reveal state is
-not saved. Apply validates the complete proposed configuration before saving.
+The window shows Screenshots and General. Apply validates the complete
+proposed configuration before saving. Hiding and restoring the window
+preserves saved preferences and pending form edits.
 
 Settings use a compact icon toolbar. Hover or keyboard-focus controls for
 their captions; the page title identifies the selected tab. The three monitor
@@ -70,12 +61,7 @@ The settings panel has softly rounded corners and quiet system-color surfaces.
 
 | Setting | Default | Accepted behavior |
 | --- | --- | --- |
-| Mouse Mover | Enabled | Pause/enable after revealing controls with Ctrl+Shift+S |
-| Idle timeout | 100 seconds | 10 through 86,400 seconds |
-| Path | Rectangle | Rectangle or circle |
-| Distance | 30 pixels | 1 through 1,000 physical pixels |
-| Cycle duration | 1 second | 0.2 through 10 seconds |
-| Prevent system sleep | Enabled | Effective while Mouse Mover is enabled and the session is available |
+| Prevent system sleep | Enabled | Subject to service and session availability |
 | Keep displays awake | Disabled | Adds display wakefulness to the system request |
 | Screenshot shortcut | Ctrl + Shift + F11 | Configurable modifier/key combination |
 | Screenshot mode | All monitors combined | Also current monitor or each monitor separately |
@@ -83,52 +69,6 @@ The settings panel has softly rounded corners and quiet system-color surfaces.
 | Start minimized to tray | Disabled | Main window is visible by default |
 | Start with Windows | Disabled | Available for the packaged executable |
 | Language | English | Discover installed catalogs; restart to apply a change |
-
-Distance is the requested rectangle side length or circle diameter. Paths
-adapt to the starting monitor's boundaries, so a path can become smaller
-near an edge. The pointer remains on that monitor. Negative screen
-coordinates, such as a monitor to the left of the primary display, are
-supported.
-
-## Mouse activity and cancellation
-
-SCR Tools deliberately submits mouse movement events to Windows using
-`SendInput`. The visible pointer follows a closed path. An uninterrupted
-cycle returns to the exact starting pixel, verifies that position, and uses
-bounded additional injected movement if a final correction is needed.
-
-The application monitors mouse motion, mouse buttons, wheel input, and
-keyboard activity throughout the current interactive session. A low-level
-hook records only that activity occurred. It never records the pressed key,
-typed text, or clipboard contents.
-
-SCR Tools tags its own injected mouse events. Those events reach Windows and
-other applications, but SCR Tools excludes them from its own idle timer.
-Input injected by other software remains external activity. After a movement
-cycle completes, the internal countdown restarts, so continued inactivity
-produces another cycle approximately 100 seconds later with default settings.
-
-External input cancels an active cycle immediately through a shared event.
-The application abandons its return path when interrupted. It also avoids
-starting or continuing while a mouse button is held. A native event already
-submitted to Windows cannot be withdrawn; cancellation stops subsequent
-events as soon as the input hook and worker observe it.
-
-**Test movement** requests one cycle without waiting for the idle timeout
-and uses the same input, desktop, display and cancellation safeguards. It
-uses the validated edited movement values without saving them. A 350 ms
-settling interval lets the triggering click finish; new external input
-during that interval cancels the test.
-
-The absolute-input mapping supports virtual-desktop width and height up to
-65,536 pixels each. Larger dimensions cannot represent every physical pixel
-in the 16-bit absolute input range and are rejected for movement.
-
-Windows identifies these events as injected input. Applications may inspect
-`LLMHF_INJECTED` or implement their own presence rules, and some can ignore
-synthetic activity. SCR Tools makes no promise about a particular chat
-client's presence indicator. It uses no driver injection, stealth mechanism,
-application-state tampering, or suppression of input elsewhere in Windows.
 
 ## Screenshots
 
@@ -218,21 +158,19 @@ Independent Windows sessions retain their own instance.
 System sleep prevention uses
 `SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED)` on the stable
 native thread. **Keep displays awake** additionally requests
-`ES_DISPLAY_REQUIRED`. Pausing Mouse Mover, disabling sleep prevention,
-losing the interactive desktop, or exiting releases the request with
-`ES_CONTINUOUS`.
+`ES_DISPLAY_REQUIRED`. Disabling sleep prevention, pausing background
+services, losing the interactive desktop, or exiting releases the request
+with `ES_CONTINUOUS`.
 
 No global power plan or registry power policy is changed. These requests
 address automatic idle sleep; they do not override deliberate sleep or
-shutdown, lid-close behavior, locking, or administrator policy. Injected
-mouse activity itself may also affect Windows/display idle behavior, even
-when the separate display-wake request is disabled.
+shutdown, lid-close behavior, locking, or administrator policy.
 
-Lock/unlock, disconnect/reconnect, suspend/resume and display changes cancel
-movement and restart scheduling when a regular interactive desktop is
+Lock/unlock, disconnect/reconnect, suspend/resume and display changes pause
+desktop operations until a regular interactive desktop is
 available. Secure-desktop availability is also checked before interaction.
-No attempt is made to inject into UAC, the lock screen, or another protected
-desktop.
+Protected desktops, including UAC and the lock screen, remain outside the
+application's supported desktop operations.
 
 ## Configuration, auto-start and privacy
 

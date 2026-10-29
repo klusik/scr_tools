@@ -26,11 +26,10 @@ monitor-mode icons, one shortcut field, a short folder row, Capture and Apply.
 Long guidance moves behind a keyboard-accessible `?`. Switches replace binary
 checkboxes. Icons retain accessible names and supplemental tooltips.
 
-Mouse Mover remains absent until Ctrl+Shift+S is pressed with focus inside
-the preview. Minimize, Close or Alt+F4 conceals it again. A simulated tray
-restore returns to screenshots, preserving edited values. The preview never
-captures a screen, moves the pointer, selects a real folder or saves settings.
-Its Capture, Test, folder and shortcut actions use synthetic local values.
+Minimize, Close or Alt+F4 hides the preview. A simulated tray restore returns
+to screenshots, preserving edited values. The preview uses synthetic local
+values for its actions and never captures a screen, selects a real folder
+or saves application settings.
 The global screenshot shortcut in the running application is not changed.
 
 ## Native implementation
@@ -44,9 +43,8 @@ Controls keep native focus and state behavior; preferences still use Apply.
 Subtle surface mixtures derive from system colors. A decorative canvas gives
 the settings panel a seven-logical-pixel corner radius, without adding a
 geometry owner or changing desktop/window opacity. Field outlines remain quiet
-and keyboard focus remains explicit. The hidden mouse page is unmanaged while
-concealed, retaining controls and pending edits without enlarging the default
-window.
+and keyboard focus remains explicit. Only visible pages contribute to window
+sizing, preserving a compact default layout and pending form edits.
 
 The screenshot review also prompted a visual consistency pass. Icon states now
 use small rounded images with a quiet selection line and an explicit rounded
@@ -56,8 +54,8 @@ and dotted icon-focus boxes are suppressed. Read-only language controls share
 the field surface, Capture/Open folder/Apply share one footer row, and long
 editable folder paths initially show their destination suffix.
 
-Retain Tkinter/ttk, translation lookup, Apply transactions, immediate mover
-pause, screenshot queuing, tray-only ordinary Exit and main-thread UI ownership.
+Retain Tkinter/ttk, translation lookup, Apply transactions, screenshot queuing,
+tray-only ordinary Exit and main-thread UI ownership.
 Do not implement translucent native windows or replace the GUI framework to
 imitate the gallery's web panels. Use native fonts, DPI-aware spacing and
 locally rendered icons instead. Preserve keyboard focus, disabled states,
@@ -69,9 +67,8 @@ source, not a replacement application or a standalone production webpage.
 ## Preview verification
 
 Both layouts rendered successfully in the local sandboxed preview with no
-browser errors. The General tab and a switch were exercised, Ctrl+Shift+S
-revealed movement, minimize concealed the window, and restore returned to
-Screenshots without the movement tab. A pending timeout edit of 321 seconds
-survived concealment and the next reveal. This is prototype-only evidence.
+browser errors. The General tab and a switch were exercised, minimize hid the
+window, and restore returned to Screenshots. Pending form edits survived
+restoration. This is prototype-only evidence.
 Native implementation checks and remaining visual acceptance are recorded in
 `VERIFICATION.md`; mixed-DPI acceptance and final packaging remain pending.

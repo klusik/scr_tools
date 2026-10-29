@@ -90,7 +90,7 @@ class GuardedDesktop:
             injector (MouseInjector): Native pixel and input implementation.
             host (NativeHost): Thread-safe native readiness provider.
             stopping (threading.Event): Set before application cleanup starts.
-            require_hooks (bool): True for movement, False for explicit capture.
+            require_hooks (bool): True for input operations, False for capture.
 
         Returns:
             None: Native resources remain owned by their original services.
@@ -161,7 +161,7 @@ class GuardedDesktop:
         return self._injector.monitors()
 
     def buttons_pressed(self) -> bool:
-        """Determine whether mouse-button state forbids automated movement.
+        """Determine whether held-button state forbids native input requests.
 
         Returns:
             bool: True if a mouse button is held or the desktop is unavailable.
@@ -172,7 +172,7 @@ class GuardedDesktop:
         )
 
     def move_to(self, point: Point) -> None:
-        """Submit only guarded, marked mouse movement to the input stream.
+        """Submit only guarded, marked events to the native input stream.
 
         Args:
             point (Point): Target physical x/y pixel.
@@ -223,7 +223,7 @@ class Application:
         self._stopping: threading.Event = threading.Event()
         # Use the same nonzero DWORD throughout injection and classification.
         # A 64-bit prefix can disappear on the round trip through Windows and
-        # make the first frame cancel its own movement as external activity.
+        # make the first frame cancel its own cycle as external activity.
         self._marker: int = secrets.randbelow(MAX_INPUT_MARKER) + 1
         self._activity: ActivityTracker = ActivityTracker(self._marker)
         self._scheduler: IdleScheduler = IdleScheduler(
@@ -323,7 +323,7 @@ class Application:
             )
 
     def _notice(self, key: str, error: bool = False) -> None:
-        """Route translated notices to ordinary or concealed movement status.
+        """Route translated notices to ordinary or optional service status.
 
         Args:
             key (str): Translation key without sensitive exception details.
@@ -402,7 +402,7 @@ class Application:
         """Apply pause immediately, then try to persist the user's preference.
 
         Args:
-            enabled (bool): Desired Mouse Mover state from the revealed window.
+            enabled (bool): Desired background-service state from the editor.
 
         Returns:
             None: A storage failure never prevents the user from pausing input.
@@ -417,7 +417,7 @@ class Application:
         try:
             self._store.save(self.settings)
         except (OSError, ConfigurationError):
-            LOGGER.error("Mover preference could not be persisted")
+            LOGGER.error("Session preference could not be persisted")
             self._notice("settings.session_only", error=True)
 
     def test_movement(self) -> None:
@@ -425,7 +425,7 @@ class Application:
 
         Returns:
             None: Input during the short settle period cancels the test. The
-            current edited movement settings are used without being saved.
+            current edited settings are used without being saved.
         """
         if (
             self._window is None or self._movement is None

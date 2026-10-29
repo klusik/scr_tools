@@ -1,13 +1,13 @@
 # Project: SCR Tools
 # Repository: SCR-Tools
 # File path: src/scr_tools/core/movement_controller.py
-# Module Type: Background cursor animation
-# Purpose: Execute one cancellable, tagged native-input movement at a time.
+# Module Type: Cancellable background worker
+# Purpose: Execute one guarded native-input operation at a time.
 # Responsibilities: Timed animation, user priority, exact closure and shutdown.
 # Author: Rudolf Klusal
 # License: MIT
 
-"""A bounded movement worker using event-driven cancellation between frames."""
+"""A bounded worker using event-driven cancellation between frames."""
 
 import logging
 import queue
@@ -28,11 +28,12 @@ MAX_FRAME_COUNT: int = 600
 FINAL_CORRECTION_ATTEMPTS: int = 3
 INPUT_SETTLE_SECONDS: float = 0.01
 WORKER_QUEUE_WAIT_SECONDS: float = 0.25
-LOGGER: logging.Logger = logging.getLogger(__name__)
+# Persist a stable diagnostic category independently of internal module names.
+LOGGER: logging.Logger = logging.getLogger("scr_tools.core.background")
 
 
 class CursorProvider(Protocol):
-    """Native operations required for movement; implementations never click."""
+    """Native operations required for a cycle; implementations never click."""
 
     def get_position(self) -> Point:
         """Return the current physical pointer pixel, or raise OSError."""
@@ -47,7 +48,7 @@ class CursorProvider(Protocol):
         ...
 
     def move_to(self, point: Point) -> None:
-        """Inject tagged absolute movement to point, or raise OSError."""
+        """Submit a tagged absolute-coordinate event, or raise OSError."""
         ...
 
     def accessible_desktop(self) -> bool:
@@ -64,7 +65,7 @@ class MovementRequest:
 
 
 class MovementController:
-    """Own one persistent worker and reject overlapping movement requests.
+    """Own one persistent worker and reject overlapping cycle requests.
 
     All GUI communication uses ``events``. Cancellation never restores the
     former starting position. A native event already submitted at the instant
@@ -76,7 +77,7 @@ class MovementController:
         self, injector: CursorProvider, activity: ActivityTracker,
         events: queue.Queue[AppEvent],
     ) -> None:
-        """Start the waiting worker without performing any movement.
+        """Start the waiting worker without submitting native input.
 
         Args:
             injector: Native cursor API, including the application's safety gate.
@@ -94,7 +95,7 @@ class MovementController:
         self._state_lock: threading.Lock = threading.Lock()
         self._moving: bool = False
         self._thread: threading.Thread = threading.Thread(
-            target=self._run, name="SCRTools-Movement", daemon=False
+            target=self._run, name="SCRTools-Background", daemon=False
         )
         self._thread.start()
 
@@ -105,7 +106,7 @@ class MovementController:
             return self._moving
 
     def start_cycle(self, settings: Settings) -> bool:
-        """Queue one cycle, including explicit tests while auto movement is off.
+        """Queue one cycle, including explicit tests while scheduling is off.
 
         Args:
             settings: Validated immutable preferences to use for this cycle.
@@ -159,7 +160,7 @@ class MovementController:
             Regular GUI shutdown must poll instead of calling this method.
 
         Raises:
-            RuntimeError: The movement worker attempts to join itself.
+            RuntimeError: The background worker attempts to join itself.
         """
         self._thread.join(timeout)
 
@@ -187,7 +188,7 @@ class MovementController:
             request: Immutable configuration and request-time input generation.
 
         Returns:
-            A movement translation key identifying completion or cancellation.
+            A translation key identifying completion or cancellation.
 
         Raises:
             OSError: Native input or position verification failed.
@@ -258,7 +259,9 @@ class MovementController:
                     key = self._execute(request)
                 except Exception as error:
                     # Exception text can contain user-controlled paths or data.
-                    LOGGER.error("Movement failed (%s)", type(error).__name__)
+                    LOGGER.error(
+                        "Background operation failed (%s)", type(error).__name__
+                    )
                 finally:
                     with self._state_lock:
                         self._moving = False

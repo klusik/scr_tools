@@ -31,7 +31,7 @@ class SettingsView(ttk.Frame):
     """Present three small pages while keeping every Tk operation local.
 
     Attributes:
-        notebook (ttk.Notebook): Screenshots, general, and optional mouse pages.
+        notebook (ttk.Notebook): Screenshot, general, and additional pages.
     """
 
     def __init__(
@@ -141,13 +141,13 @@ class SettingsView(ttk.Frame):
         self.event_generate("<<SettingsLayoutChanged>>")
 
     def set_movement_visible(self, visible: bool) -> None:
-        """Reveal or conceal the mouse page without changing its form values.
+        """Reveal or conceal additional settings without changing form values.
 
         Args:
-            visible (bool): Whether to expose and select the mouse page.
+            visible (bool): Whether to expose and select the additional page.
 
         Returns:
-            None: Concealment selects Screenshots if the mouse page was active.
+            None: Concealment selects Screenshots if that page was active.
                 Hidden controls retain both applied and pending edits.
         """
         if visible:
@@ -155,7 +155,7 @@ class SettingsView(ttk.Frame):
                 self.notebook.insert(
                     0, self._mouse_page,
                     text=self._translator.text("tab.mouse"),
-                    image=self._presentation.control_images("mouse"), compound="image",
+                    image=self._presentation.control_images("settings"), compound="image",
                 )
             self.notebook.select(self._mouse_page)
         else:
@@ -261,12 +261,12 @@ class SettingsView(ttk.Frame):
         )
 
     def _build_mouse_page(self) -> None:
-        """Create movement and power controls without applying them yet.
+        """Create additional controls without applying their values yet.
 
         Returns:
             None: The notebook gains one populated page.
         """
-        self._mouse_page: ttk.Frame = self._page("tab.mouse", "mouse")
+        self._mouse_page: ttk.Frame = self._page("tab.mouse", "settings")
         page: ttk.Frame = self._mouse_page
         self._heading(page, "tab.mouse", ("settings.movement_hint",))
         self._label(page, 1, "settings.idle")

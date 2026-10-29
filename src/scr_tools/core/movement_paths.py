@@ -1,7 +1,7 @@
 # Project: SCR Tools
 # Repository: SCR-Tools
 # File path: src/scr_tools/core/movement_paths.py
-# Module Type: Cursor path geometry
+# Module Type: Physical coordinate geometry
 # Purpose: Build closed animated paths within one physical monitor.
 # Responsibilities: Pixel-accurate closure, edge adaptation and negative origins.
 # Author: Rudolf Klusal
@@ -69,7 +69,7 @@ def rectangle_path(
         start: Starting physical pixel, also the final returned position.
         bounds: Owning monitor bounds with exclusive right and bottom edges.
         size: Desired side length; each axis shrinks only when necessary.
-        steps: Number of timed movement intervals.
+        steps: Number of timed interpolation intervals.
 
     Returns:
         ``steps + 1`` points, including the initial point and exact closure.
@@ -107,7 +107,7 @@ def circle_path(
         start: Starting physical pixel and exact final position.
         bounds: Owning monitor bounds, permitting negative desktop coordinates.
         size: Desired circle diameter in pixels.
-        steps: Number of timed movement intervals.
+        steps: Number of timed interpolation intervals.
 
     Returns:
         ``steps + 1`` bounded points forming a genuinely closed circular path.

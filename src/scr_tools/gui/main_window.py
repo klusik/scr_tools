@@ -35,7 +35,7 @@ class WindowActions:
 
     Attributes:
         apply (Callable[[], None]): Validate and persist the edited settings.
-        toggle (Callable[[bool], None]): Immediately enable or pause movement.
+        toggle (Callable[[bool], None]): Immediately enable or pause the worker.
         test (Callable[[], None]): Request one explicit, cancellable cycle.
         capture (Callable[[], None]): Enqueue an explicit screenshot request.
         open_folder (Callable[[], None]): Open the applied screenshot folder.
@@ -51,7 +51,7 @@ class WindowActions:
 
 
 class MainWindow:
-    """Screenshot controls with movement details revealed only on request."""
+    """Screenshot controls with additional settings available on request."""
 
     def __init__(
         self,
@@ -101,7 +101,7 @@ class MainWindow:
         root.protocol("WM_DELETE_WINDOW", self._request_hide)
         root.bind("<Unmap>", self._on_unmap, add="+")
         # A window-local binding reveals existing controls on the Tk thread.
-        # It neither installs a global hotkey nor changes movement settings.
+        # It neither installs a global hotkey nor changes applied settings.
         for sequence in MOVEMENT_REVEAL_SEQUENCES:
             root.bind(sequence, self._reveal_movement_settings, add="+")
         if icon_path.is_file():
@@ -228,7 +228,7 @@ class MainWindow:
         """Change presentation only, preserving settings and running services.
 
         Args:
-            visible (bool): Whether movement controls and status are exposed.
+            visible (bool): Whether additional controls and status are exposed.
 
         Returns:
             None: Existing widget values survive concealment and restoration.
@@ -242,10 +242,10 @@ class MainWindow:
         self.root.after_idle(self._fit_content)
 
     def _reveal_movement_settings(self, event: tk.Event) -> str:
-        """Expose the mouse page for this visible window session.
+        """Expose the additional page for this visible window session.
 
         Args:
-            event (tk.Event): Window-local Ctrl+Shift+S key press.
+            event (tk.Event): Window-local settings shortcut key press.
 
         Returns:
             str: Tk's break sentinel consumes the shortcut without editing text.
@@ -370,10 +370,10 @@ class MainWindow:
         self.root.after_idle(self._fit_content)
 
     def set_movement_notice(self, message: str, error: bool = False) -> None:
-        """Retain movement results within the optionally visible controls.
+        """Retain background results within the optionally visible controls.
 
         Args:
-            message (str): Translated movement, input, or power diagnostic.
+            message (str): Translated operation, input, or power diagnostic.
             error (bool): Whether the result should use an error foreground.
 
         Returns:
@@ -414,13 +414,13 @@ class MainWindow:
             self._fitting = False
 
     def set_last_movement(self, message: str) -> None:
-        """Show when the most recent uninterrupted movement completed.
+        """Show when the most recent uninterrupted operation completed.
 
         Args:
             message (str): Translated local time or the initial never-run text.
 
         Returns:
-            None: The movement detail label is updated.
+            None: The completion detail label is updated.
         """
         self._last_movement.set(message)
 

@@ -56,8 +56,8 @@ class Settings:
     Attributes:
         schema_version: Persisted format revision supported by this release.
         idle_seconds: Uninterrupted external-input inactivity before a cycle.
-        mover_enabled: Whether automatic movement and sleep requests operate.
-        pattern: Closed movement-path name.
+        mover_enabled: Whether background cycles and sleep requests operate.
+        pattern: Closed coordinate-pattern name.
         distance_pixels: Requested rectangle side or circle diameter in pixels.
         duration_seconds: Duration of one complete path in seconds.
         prevent_sleep: Request that Windows not sleep from system inactivity.

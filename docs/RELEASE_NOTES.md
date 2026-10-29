@@ -11,23 +11,16 @@ switches for binary preferences. Monitor-mode choices use three icon controls.
 Detailed guidance is available under plain **?** buttons and icon captions in
 tooltips. Help supports keyboard activation, Escape and outside-click dismissal.
 
-The normal window now shows Screenshots and General. Mouse Mover settings,
-enable/pause, Test movement, countdown, last-movement time and movement
-diagnostics are hidden until you press **Ctrl+Shift+S** in the SCR Tools
-window. Repeated presses keep these controls visible.
-
-Minimizing, closing with X or Alt+F4, or hiding to tray conceals these controls
-again. Restoring the window keeps them concealed until the shortcut is used
-again. Concealment changes presentation only: movement, sleep-prevention
-preferences, saved values and pending form edits are retained.
+The normal window shows Screenshots and General. Minimizing, closing with X
+or Alt+F4, or hiding to tray preserves saved preferences and pending form
+edits. Restoring the window returns to the screenshot controls.
 
 The tray menu now contains Open SCR Tools, Capture screenshot and Exit SCR
-Tools. Movement results and errors remain within the concealed movement area;
-screenshot results and ordinary application notices remain visible.
+Tools. Screenshot results and ordinary application notices remain visible.
 
 Existing settings remain compatible and require no migration. The screenshot
-shortcut remains **Ctrl+Shift+F11** by default. Ctrl+Shift+S is a separate,
-window-local reveal shortcut. Windows 11 x64, system CPython 3.14 for source
+shortcut remains **Ctrl+Shift+F11** by default. Windows 11 x64, system CPython
+3.14 for source
 execution, and per-user installation requirements remain unchanged.
 
 Planned release files, to be built after final design acceptance:

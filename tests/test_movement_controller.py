@@ -9,11 +9,13 @@
 
 """Movement-worker tests using an observable in-memory native API substitute."""
 
+import logging
 import queue
 import threading
 import unittest
 from collections.abc import Callable
 from dataclasses import replace
+from unittest.mock import patch
 
 from scr_tools.configuration import Settings
 from scr_tools.core.idle_scheduler import ActivitySnapshot, ActivityTracker
@@ -156,6 +158,30 @@ class MovementControllerTests(unittest.TestCase):
         self.assertTrue(self.controller.start_cycle(self.settings))
         self.assertFalse(self.controller.start_cycle(self.settings))
         self.events.get(timeout=2.0)
+
+    def test_failure_reports_safe_diagnostics_and_worker_recovers(self) -> None:
+        """Failures retain their category without private details or UI copy."""
+        with (
+            self.assertLogs("scr_tools", level="ERROR") as diagnostics,
+            patch.object(
+                self.cursor, "monitor_bounds",
+                side_effect=OSError("private-test-detail"),
+            ),
+        ):
+            self.assertTrue(self.controller.start_cycle(self.settings))
+            event: AppEvent = self.events.get(timeout=2.0)
+        self.assertEqual(event.key, "movement.failed")
+        self.assertEqual(event.values.get("completed"), 0)
+        self.assertEqual(self.cursor.positions, [])
+        self.assertEqual(len(diagnostics.records), 1)
+        self.assertEqual(diagnostics.records[0].levelno, logging.ERROR)
+        rendered: str = "\n".join(diagnostics.output)
+        self.assertIn("OSError", rendered)
+        self.assertNotIn("private-test-detail", rendered)
+        self.assertNotRegex(rendered, r"(?i)movement|mover|moving")
+        self.assertTrue(self.controller.is_alive())
+        self.assertTrue(self.controller.start_cycle(self.settings))
+        self.assertEqual(self.events.get(timeout=2.0).key, "movement.completed")
 
     def test_cancel_before_arm_cannot_be_cleared(self) -> None:
         """Explicit cancellation invalidates a request before its worker arms."""

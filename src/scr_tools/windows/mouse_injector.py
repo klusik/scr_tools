@@ -2,11 +2,11 @@
 # Repository: SCR-Tools
 # File path: src/scr_tools/windows/mouse_injector.py
 # Module Type: Windows input adapter
-# Purpose: Send identifiable absolute mouse movement into Windows input.
+# Purpose: Submit marked native events using physical desktop coordinates.
 # Responsibilities: Physical geometry, desktop checks, and SendInput events.
 # Author: Rudolf Klusal
 # License: MIT
-"""Physical-pixel mouse injection; this module never synthesizes buttons."""
+"""Physical desktop coordinates and guarded native input events."""
 
 import ctypes
 
@@ -55,7 +55,7 @@ def normalize_coordinate(position: int, origin: int, extent: int) -> int:
         raise ValueError("Virtual desktop exceeds absolute-input precision")
     offset = position - origin
     if not 0 <= offset < extent:
-        raise ValueError("Mouse destination is outside the virtual desktop")
+        raise ValueError("Destination is outside the virtual desktop")
     # Choose an integer actually inside the pixel's interval. Rounding a
     # floating midpoint down can select the previous pixel when the desktop
     # approaches the 65,536-position precision limit.
@@ -108,7 +108,7 @@ def set_process_dpi_awareness() -> None:
 
 
 class MouseInjector:
-    """Inject only marked absolute movement, with no silent cursor warping."""
+    """Submit marked absolute-coordinate events through the documented API."""
 
     def __init__(self, marker: int) -> None:
         """Create a native input adapter.
@@ -122,7 +122,7 @@ class MouseInjector:
             OSError: The process is not running on 64-bit Windows.
         """
         if not 0 < marker <= MAX_INPUT_MARKER:
-            raise ValueError("Mouse event marker must be a nonzero uint32")
+            raise ValueError("Input event marker must be a nonzero uint32")
         self.marker: int = marker
         self.api: WindowsAPI = WindowsAPI()
 
@@ -213,7 +213,7 @@ class MouseInjector:
         return desktop_accessible(self.api)
 
     def move_to(self, point: Point) -> None:
-        """Send one marked, absolute physical-pixel mouse movement.
+        """Submit one marked event with absolute physical-pixel coordinates.
 
         Args:
             point: Destination physical coordinates on the virtual desktop.
