@@ -2,7 +2,7 @@
 # Repository: SCR-Tools
 # File path: src/scr_tools/windows/power_prevention.py
 # Module Type: Thread-owned Windows power request
-# Purpose: Prevent automatic system sleep while the mover is effective.
+# Purpose: Prevent automatic system sleep while background services are ready.
 # Responsibilities: Acquire, update and release execution-state requirements.
 # Author: Rudolf Klusal
 # License: MIT
@@ -35,7 +35,7 @@ class PowerPrevention:
         """Update power requirements on the owning native thread.
 
         Args:
-            mover_enabled: Whether the mover is enabled and its hooks work.
+            mover_enabled: Whether background services and hooks are ready.
             prevent_sleep: Whether automatic system sleep is prevented.
             keep_displays_awake: Whether display sleep should also be blocked.
             interactive: Whether the ordinary user desktop is available.

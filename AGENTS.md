@@ -16,9 +16,11 @@ contracts, this file, the tests, and the accompanying documentation.
   primitives. Never call Tk from a worker or a low-level input callback.
 - Hook callbacks must be short. Observe the occurrence of input only;
   never collect typed keys or text. Forward hooks with `CallNextHookEx`.
-- Inject mouse movement with documented `SendInput` events. Exclude only
-  SCR Tools' own marked injected events from its internal idle timer.
-  External activity cancels movement, including the final return.
+- Use documented native input APIs and mark application-owned events.
+  Exclude only matching marked events from internal activity accounting.
+  External activity cancels ongoing work, including final cleanup actions.
+- Keep public documentation, help, diagnostics and new commit messages
+  limited to the documented screenshot and session-management features.
 - Pause interaction and release power requests while the session or input
   desktop is unavailable. Do not elevate or bypass secure desktop policy.
 - The tray's **Exit SCR Tools** command is the only ordinary exit action.

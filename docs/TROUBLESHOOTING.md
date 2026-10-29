@@ -7,69 +7,13 @@ panel, double-click the SCR Tools icon, or choose **Open SCR Tools**. Launching
 the app again in the same session also restores the existing window.
 
 To quit, choose **Exit SCR Tools** in the tray. A closed main window does not
-mean that mouse monitoring, hotkeys or sleep prevention have stopped. If
+mean that background services, hotkeys or sleep prevention have stopped. If
 Windows hides the icon, change its notification-area visibility in the
 taskbar settings. The application cannot force Windows to pin the icon.
 
 If tray registration fails, SCR Tools reports the failure and keeps its window
 accessible instead of hiding the only available controls. Explorer restarts
 are handled by re-registering the icon.
-
-## Mouse Mover settings are hidden
-
-Focus the SCR Tools window and press **Ctrl+Shift+S**. This reveals the
-movement page, enable/pause control, test action and status. Minimize, Close,
-Alt+F4 and hiding to tray conceal them again, including after restoration.
-Their visibility does not change saved preferences, pending edits, background
-movement or sleep prevention. The tray has no movement toggle.
-
-## The timer keeps resetting or movement does not start
-
-First reveal movement controls with **Ctrl+Shift+S** in the focused window.
-
-If a 10-second countdown reaches 9/10, immediately restarts at 0/10 and
-**Last movement** stays **Never**, update to the corrected source/build and
-restart SCR Tools. The original 64-bit event marker could lose its upper
-32 bits in the Windows mouse hook, making the first automated frame cancel
-its own cycle. The corrected code uses one nonzero 32-bit marker throughout
-injection and activity tracking; it still cancels on external input.
-
-Any mouse or keyboard input in the interactive session resets the countdown.
-This includes other applications, accessibility tools, remote input and
-software-generated input that does not carry this SCR Tools process's own
-marker. A held mouse button prevents a movement cycle.
-
-Check that Mouse Mover is enabled, the normal desktop is available, and the
-display topology is stable. Locked/disconnected sessions and UAC secure
-desktops pause interaction. Resume/unlock starts a fresh idle period.
-
-**Test movement** uses the same safety gates. After its short settling delay,
-leave the mouse and keyboard untouched. Input during that delay cancels the
-test. If an input-hook or injection error is reported, review the operational
-log and use the Windows acceptance checklist before relying on automatic
-movement. Do not run the application elevated to try to bypass desktop policy.
-
-## The pointer stops before returning to the original position
-
-External input deliberately interrupts the path and cancels restoration.
-SCR Tools does not compete with the user's new position. Session/display
-changes and held buttons also interrupt movement. Only an uninterrupted
-cycle verifies and, when needed, corrects its return pixel.
-
-An application that confines the pointer, changes the desktop, or changes
-display geometry during a cycle can prevent a successful return. Such a
-cycle is reported as cancelled/failed rather than repeatedly forcing input.
-
-Movement also rejects virtual desktops wider or taller than 65,536 pixels,
-the number of addressable absolute input coordinates on each axis. This
-avoids claiming exact pixel restoration for an unrepresentable desktop.
-
-## A presence indicator still shows Away
-
-The movement is submitted as supported Windows `SendInput` mouse events.
-Windows exposes the injected flag. A third-party application can distinguish
-or ignore those events, use keyboard-only presence, or use a separate idle
-policy. There is no universal presence guarantee and no stealth mode.
 
 ## The screenshot shortcut is unavailable
 
@@ -120,16 +64,14 @@ does not resize captures. Validate mixed-DPI arrangements with
 
 ## Windows still sleeps, locks, or turns a display off
 
-Confirm **Prevent system sleep** is enabled and Mouse Mover is active. To
-request display wakefulness explicitly, also enable **Keep displays awake**.
+Confirm **Prevent sleep** is enabled and background services are available.
+To request display wakefulness explicitly, also enable **Keep displays awake**.
 Requests are released when the app is paused or its desktop/session is
 unavailable. The app reports native request failures.
 
 Execution-state requests concern automatic idle sleep. Deliberate Sleep,
 shutdown, lid-close settings, screen locking and administrator policies can
-still apply. The utility does not rewrite the system power plan. Mouse input
-can itself affect a display's idle timer, independently of the explicit
-display-wake setting.
+still apply. The utility does not rewrite the system power plan.
 
 ## Settings were reset or cannot be saved
 

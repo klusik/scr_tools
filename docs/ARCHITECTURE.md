@@ -9,8 +9,7 @@
 | `configuration.py` | Typed defaults, normalization, schema handling and atomic JSON writes |
 | `localization/` | English catalog, locale loading and fallback formatting |
 | `core/idle_scheduler.py` | Activity timestamps, cancellation signalling and monotonic deadlines |
-| `core/movement_paths.py` | Closed monitor-bounded rectangle/circle geometry |
-| `core/movement_controller.py` | One movement worker, timing, input cancellation and final verification |
+| `core/` | Bounded workers, physical-screen geometry and cancellation contracts |
 | `core/screenshot_service.py` | Bounded explicit requests, native PNG captures and unique files |
 | `core/hotkey_spec.py` | Pure validated shortcut syntax |
 | `windows/` | Win32 ctypes bindings, input, screens, desktop safety, tray and OS integration |
@@ -29,23 +28,13 @@ Scheduling checks are lightweight and use Tk's `after` mechanism; status
 updates are throttled so the displayed countdown is useful without repainting
 the entire window on each check. No worker calls Tk.
 
-Movement presentation is concealed by default. A window-local Ctrl+Shift+S
-binding reveals the existing mouse page, actions and status on the Tk thread.
-Close, minimize and withdrawal conceal them again. Notebook hiding and grid
-removal retain editor variables and never reconfigure the scheduler, native
-host or power requests. Movement notices have a separate concealed label so
-background completions and failures cannot replace ordinary window notices.
-The tray offers only open, capture and exit. Reveal visibility is transient
-view state and is not a persisted preference or a global hotkey registration.
-
 `gui/compact_style.py` owns main-thread Pillow/Tk images for local line icons
 and switch indicators, scaled from current Tk DPI. Switches and monitor-mode
 choices retain native ttk checkbutton/radiobutton variables, keyboard focus
 and disabled-state behavior. The palette derives from Windows system colors.
 A placed canvas supplies a small rounded settings backdrop without taking
-part in grid size negotiation. The native notebook owns its tab hit testing;
-concealment unmanages the existing mouse page so it cannot inflate ordinary
-settings, while the page and all edited variables remain alive.
+part in grid size negotiation. The native notebook owns its tab hit testing and measures visible pages
+without discarding editor variables when the window is hidden.
 
 `gui/context_help.py` owns translated tooltips and click/keyboard help popups.
 It cancels delayed hints and releases transient windows and root bindings on
@@ -59,15 +48,14 @@ tray icon, WTS session notifications and `SetThreadExecutionState`. Queued
 configuration commands are posted into this thread. Thread-affine APIs are
 released from the same owner during teardown.
 
-The movement worker waits for explicit cycle requests. It uses an event wait
-between physical cursor positions, making input cancellation wake it promptly.
-Only one movement can be active. The screenshot worker serializes screen
-capture and PNG encoding, with four queued requests at most. Both return
-status through `AppEvent` queues.
+Workers accept bounded requests and use events for prompt cancellation.
+The screenshot worker serializes screen capture and PNG encoding, with
+four queued requests at most. Worker status returns through `AppEvent`
+queues.
 
 Shutdown starts from the tray Exit action, native OS shutdown, or a fatal
 startup/lifecycle failure. The coordinator stops accepting work, cancels
-movement, discards pending capture requests, requests native cleanup and
+active operations, discards pending capture requests, requests native cleanup and
 waits asynchronously for workers to finish. Window close/minimize simply
 withdraw the Tk window and do not enter this shutdown sequence.
 
@@ -75,44 +63,12 @@ A PNG encode already in progress may finish its current I/O. The capture
 worker then detects shutdown/unavailability and deletes outputs from that
 unfinished request when possible; prior completed requests are preserved.
 
-## Activity and movement contracts
+## Input contracts
 
-`ActivityTracker` uses a monotonic timestamp and generation counter. Input
-callbacks only classify the marker/flags, record occurrence and signal
-cancellation. They always forward input to the rest of Windows and do not
-store virtual-key codes or text.
-
-Only an injected event carrying this process's marker is considered SCR
-Tools' own input. Other injected activity, including accessibility or remote
-control input, resets the internal timer. Completion of a movement creates
-an explicit new scheduling baseline; self-generated hook traffic does not
-advance that baseline accidentally.
-
-The process chooses a random nonzero unsigned 32-bit marker. Both ctypes
-`dwExtraInfo` fields remain pointer-sized as required by the Windows x64 ABI,
-but live Windows 11 testing showed that the mouse hook can receive only the
-low 32 bits of an injected value. The injector rejects wider identifiers.
-Using the same bounded value end to end avoids self-cancellation without
-masking foreign markers or excluding other software's injected input.
-
-Coordinates are physical integer pixels. Monitor rectangles use inclusive
-left/top and exclusive right/bottom bounds. Paths remain inside the monitor
-containing the start point, and negative origins are valid. The injector maps
-physical positions into absolute virtual-desktop `SendInput` coordinates and
-never synthesizes clicks, wheel events or keys. Virtual-desktop dimensions
-above 65,536 pixels on either axis are rejected for movement because the
-absolute input field cannot represent every pixel beyond that range.
-
-At each safe movement boundary the controller rechecks cancellation, desktop
-availability and held mouse buttons. Display/session changes signal the same
-cancellation channel. An uninterrupted cycle uses `GetCursorPos` to check
-the return pixel and applies a limited injected correction if necessary.
-An interrupted cycle never tries to return to the old origin.
-
-There is an unavoidable boundary between an OS input event already submitted
-and the subsequent hook notification. The design cancels subsequent movement
-promptly and never holds an application lock across `SendInput` that could
-block the low-level hook callback.
+Input callbacks record occurrence times and signal cancellation without
+storing virtual-key codes or typed text. They always forward events to
+Windows and never call Tk. External input and desktop/session transitions
+invalidate pending work through a shared cancellation channel.
 
 ## Native integration
 
@@ -132,9 +88,9 @@ or session conditions no longer permit it. It does not modify global power
 plans and cannot override deliberate OS policy or user actions.
 
 The session gate combines WTS notifications, power/display messages and
-availability of the ordinary `Default` input desktop. Movement and capture
-also gate their own operations. This keeps UAC, lock screens and inaccessible
-desktops outside the app's activity/capture operations.
+availability of the ordinary `Default` input desktop. Workers also gate
+their own operations. UAC, lock screens and inaccessible desktops remain
+outside the application's supported desktop operations.
 
 The host polls both desktop availability and WTS connection state every
 500 ms. Starting in an already disconnected RDP session therefore fails
@@ -173,9 +129,6 @@ restart. Packaging includes all maintained JSON catalogs.
 
 ## References and limits
 
-- [SendInput](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendinput).
-- [MOUSEINPUT and virtual-desktop mapping](https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-mouseinput).
-- [LowLevelMouseProc](https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelmouseproc).
 - [RegisterHotKey](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerhotkey).
 - [SetThreadExecutionState](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-setthreadexecutionstate).
 - [Pillow ImageGrab](https://pillow.readthedocs.io/en/stable/reference/ImageGrab.html).

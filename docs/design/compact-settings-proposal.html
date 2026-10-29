@@ -4,7 +4,7 @@ Repository: SCR-Tools (local Git-ready source)
 File path: docs/design/compact-settings-proposal.html
 Module Type: Interactive design proposal
 Purpose: Compare two compact settings layouts before changing the Tk interface.
-Responsibilities: Preview navigation, switches, help and transient mover visibility.
+Responsibilities: Preview navigation, switches, contextual help and window state.
 Author: Rudolf Klusal
 License: MIT
 -->
@@ -271,7 +271,7 @@ License: MIT
   border-radius: 8px;
 }
 #scr-design-preview .scr-tray button { border: 1px solid var(--scr-line); }
-#scr-design-preview .scr-movement-result { color: var(--scr-muted); font-size: 12px; }
+#scr-design-preview .scr-advanced-result { color: var(--scr-muted); font-size: 12px; }
 @media (max-width: 430px) {
   #scr-design-preview .scr-stage { padding-inline: 0; min-height: 650px; }
   #scr-design-preview .scr-main { padding-inline: 12px; }
@@ -315,7 +315,7 @@ License: MIT
       <nav class="scr-nav" role="tablist" aria-label="Settings">
         <button type="button" role="tab" class="cursor-interaction" data-tab="screenshots" aria-selected="true" aria-label="Screenshots" data-tooltip="Screenshots"><i data-lucide="camera" aria-hidden="true"></i><span class="scr-nav-label">Screenshots</span></button>
         <button type="button" role="tab" class="cursor-interaction" data-tab="general" aria-selected="false" aria-label="General" data-tooltip="General"><i data-lucide="settings-2" aria-hidden="true"></i><span class="scr-nav-label">General</span></button>
-        <button type="button" role="tab" class="cursor-interaction" data-tab="movement" aria-selected="false" aria-label="Mouse Mover" data-tooltip="Mouse Mover" hidden><i data-lucide="mouse-pointer-2" aria-hidden="true"></i><span class="scr-nav-label">Mouse</span></button>
+        <button type="button" role="tab" class="cursor-interaction" data-tab="advanced" aria-selected="false" aria-label="Advanced" data-tooltip="Advanced" hidden><i data-lucide="mouse-pointer-2" aria-hidden="true"></i><span class="scr-nav-label">Mouse</span></button>
       </nav>
       <main class="scr-main">
         <section data-panel="screenshots" role="tabpanel">
@@ -345,15 +345,15 @@ License: MIT
           <label class="scr-row"><span class="scr-label"><i data-lucide="panel-top-close" aria-hidden="true"></i>Start in tray</span><input type="checkbox" class="scr-switch cursor-interaction" data-setting="minimized" aria-label="Start in tray"></label>
           <label class="scr-row"><span class="scr-label"><i data-lucide="languages" aria-hidden="true"></i>Language</span><select aria-label="Interface language"><option>English</option></select></label>
         </section>
-        <section data-panel="movement" role="tabpanel" hidden>
-          <div class="scr-heading"><h2>Mouse Mover</h2><label class="scr-label"><span class="scr-unit">Enabled</span><input type="checkbox" class="scr-switch cursor-interaction" data-setting="mover" aria-label="Enable Mouse Mover" checked></label></div>
+        <section data-panel="advanced" role="tabpanel" hidden>
+          <div class="scr-heading"><h2>Advanced</h2><label class="scr-label"><span class="scr-unit">Enabled</span><input type="checkbox" class="scr-switch cursor-interaction" data-setting="enabled" aria-label="Enable background operations" checked></label></div>
           <label class="scr-row"><span class="scr-label"><i data-lucide="timer" aria-hidden="true"></i>Idle timeout</span><span class="scr-number"><input type="number" min="10" max="86400" value="100" aria-label="Idle timeout in seconds"><span class="scr-unit">s</span></span></label>
-          <div class="scr-row"><span class="scr-label"><i data-lucide="route" aria-hidden="true"></i>Path</span><div class="scr-choice" role="group" aria-label="Movement pattern"><button type="button" class="cursor-interaction" data-pattern="rectangle" aria-pressed="true" aria-label="Rectangle" data-tooltip="Rectangle"><i data-lucide="rectangle-horizontal" aria-hidden="true"></i></button><button type="button" class="cursor-interaction" data-pattern="circle" aria-pressed="false" aria-label="Circle" data-tooltip="Circle"><i data-lucide="circle" aria-hidden="true"></i></button></div></div>
+          <div class="scr-row"><span class="scr-label"><i data-lucide="route" aria-hidden="true"></i>Path</span><div class="scr-choice" role="group" aria-label="Pattern"><button type="button" class="cursor-interaction" data-pattern="rectangle" aria-pressed="true" aria-label="Rectangle" data-tooltip="Rectangle"><i data-lucide="rectangle-horizontal" aria-hidden="true"></i></button><button type="button" class="cursor-interaction" data-pattern="circle" aria-pressed="false" aria-label="Circle" data-tooltip="Circle"><i data-lucide="circle" aria-hidden="true"></i></button></div></div>
           <div class="scr-row"><label class="scr-number">Size<input type="number" min="1" max="1000" value="30" aria-label="Path size in pixels"><span class="scr-unit">px</span></label><label class="scr-number">Duration<input type="number" min="0.2" max="10" step="0.1" value="1" aria-label="Cycle duration in seconds"><span class="scr-unit">s</span></label></div>
           <hr class="scr-divider">
           <label class="scr-row"><span class="scr-label"><i data-lucide="moon" aria-hidden="true"></i>Prevent sleep</span><input type="checkbox" class="scr-switch cursor-interaction" data-setting="sleep" aria-label="Prevent system sleep" checked></label>
           <label class="scr-row"><span class="scr-label"><i data-lucide="sun" aria-hidden="true"></i>Keep displays awake</span><input type="checkbox" class="scr-switch cursor-interaction" data-setting="display" aria-label="Keep displays awake"></label>
-          <div class="scr-row"><button type="button" class="cursor-interaction" data-test><i data-lucide="play" aria-hidden="true"></i>Test</button><span class="scr-movement-result" data-movement-result aria-live="polite">Last movement: not yet</span></div>
+          <div class="scr-row"><button type="button" class="cursor-interaction" data-test><i data-lucide="play" aria-hidden="true"></i>Test</button><span class="scr-advanced-result" data-advanced-result aria-live="polite">Last completed: not yet</span></div>
         </section>
         <hr class="scr-divider">
         <footer class="scr-actions">
@@ -432,10 +432,10 @@ License: MIT
       remember();
     }
 
-    /** Conceal movement on every simulated minimize or close action. */
+    /** Conceal advanced on every simulated minimize or close action. */
     function hideWindow() {
       demo.revealed = false;
-      shell.querySelector('[data-tab="movement"]').hidden = true;
+      shell.querySelector('[data-tab="advanced"]').hidden = true;
       selectTab(demo, 'screenshots');
       shell.hidden = true;
       stage.querySelector('.scr-tray').hidden = false;
@@ -477,7 +477,7 @@ License: MIT
         remember();
       }
       if (button.hasAttribute('data-capture')) shell.querySelector('[data-status]').textContent = 'Preview · SCRTools_example.png';
-      if (button.hasAttribute('data-test')) shell.querySelector('[data-movement-result]').textContent = 'Preview cycle completed';
+      if (button.hasAttribute('data-test')) shell.querySelector('[data-advanced-result]').textContent = 'Preview cycle completed';
     });
     shell.addEventListener('change', event => {
       if (event.target.matches('[data-setting="sleep"]')) {
@@ -490,8 +490,8 @@ License: MIT
         event.preventDefault();
         event.stopPropagation();
         demo.revealed = true;
-        shell.querySelector('[data-tab="movement"]').hidden = false;
-        selectTab(demo, 'movement');
+        shell.querySelector('[data-tab="advanced"]').hidden = false;
+        selectTab(demo, 'advanced');
       }
       if (event.key === 'Escape') {
         shell.querySelectorAll('[data-help]').forEach(button => button.setAttribute('aria-expanded', 'false'));

@@ -2,7 +2,7 @@
 # Repository: SCR-Tools
 # File path: src/scr_tools/core/idle_scheduler.py
 # Module Type: Input timing and scheduling
-# Purpose: Separate external activity from our own injected mouse events.
+# Purpose: Separate external activity from application-owned native events.
 # Responsibilities: Cancellation signalling and monotonic recurring idle cycles.
 # Author: Rudolf Klusal
 # License: MIT
@@ -34,7 +34,7 @@ class ActivityTracker:
     """Share only input occurrence, never key identities or typed content.
 
     Attributes:
-        cancel_event: Wakes the movement worker immediately on external input.
+        cancel_event: Wakes the background worker immediately on external input.
     """
 
     def __init__(
@@ -64,7 +64,7 @@ class ActivityTracker:
             injected: True when the relevant native injected-input flag is set.
 
         Returns:
-            None. External input also signals movement cancellation.
+            None. External input also signals cycle cancellation.
         """
         if injected and extra_info == self._marker:
             return
@@ -94,7 +94,7 @@ class ActivityTracker:
         """Prepare cancellation without erasing an input-arrival race.
 
         Args:
-            expected_generation: Generation observed when movement was queued.
+            expected_generation: Generation observed when the cycle was queued.
                 None permits arming at the current generation.
 
         Returns:
@@ -144,7 +144,7 @@ class IdleScheduler:
 
         Args:
             idle_seconds: Validated inactivity threshold in seconds.
-            enabled: Whether the user's Mouse Mover toggle is enabled.
+            enabled: Whether the user's background-service toggle is enabled.
             interactive: Whether hooks and the normal input desktop are ready.
 
         Returns:
@@ -210,6 +210,6 @@ class IdleScheduler:
         """Start a fresh scheduling interval after a policy or session change.
 
         Returns:
-            None. The caller separately cancels any running movement.
+            None. The caller separately cancels any running cycle.
         """
         self.finish_cycle()

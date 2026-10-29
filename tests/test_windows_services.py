@@ -87,7 +87,7 @@ class PowerPreventionTests(unittest.TestCase):
     """Verify stable request flags and explicit release across transitions."""
 
     def test_enable_pause_resume_display_and_exit(self) -> None:
-        """Effective mover state owns both system and optional display flags."""
+        """Effective service state owns system and optional display flags."""
         setter = Mock(return_value=ES_CONTINUOUS)
         power = PowerPrevention(setter)
         self.assertTrue(power.configure(True, True, False, True))
@@ -392,7 +392,7 @@ class NativeHostLifecycleTests(unittest.TestCase):
         self.assertTrue(self.host._stop.is_set())
 
     def test_failed_hooks_never_report_ready(self) -> None:
-        """Unstarted or failed monitoring must not authorize movement."""
+        """Unstarted or failed monitoring must not authorize native input."""
         self.assertFalse(self.host.hooks_ready())
         self.assertFalse(self.host.interactive())
         self.assertFalse(self.host.tray_ready())
@@ -414,7 +414,7 @@ class TrayMenuTests(unittest.TestCase):
         self.addCleanup(self.tray.close)
 
     def test_menu_has_only_open_capture_and_exit_actions(self) -> None:
-        """No normal tray item advertises or toggles mouse movement."""
+        """The tray offers only its documented open, capture and exit actions."""
         self.api.user32.TrackPopupMenu.return_value = 103
         self.assertEqual(self.tray.show_menu(), "capture")
         self.assertEqual(
@@ -425,7 +425,7 @@ class TrayMenuTests(unittest.TestCase):
         self.api.user32.DestroyMenu.assert_called_once_with(6)
 
     def test_open_exit_dismissal_and_stale_toggle_identifier(self) -> None:
-        """Restore and exit survive removal of the former movement item."""
+        """Restore and exit remain usable while stale commands are ignored."""
         for selected, expected in ((101, "open"), (104, "exit"),
                                    (0, None), (102, None)):
             with self.subTest(selected=selected):
